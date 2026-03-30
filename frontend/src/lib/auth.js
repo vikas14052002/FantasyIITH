@@ -55,3 +55,34 @@ export function getUser() {
 export function logout() {
   localStorage.removeItem('user');
 }
+
+export async function updateProfile(userId, newName, newPassword) {
+  const trimmed = newName.trim().toLowerCase();
+  if (!trimmed) throw new Error('Name is required');
+
+  // Check if name is taken by another user
+  const { data: existing } = await supabase
+    .from('users')
+    .select('id')
+    .eq('name', trimmed)
+    .neq('id', userId)
+    .maybeSingle();
+
+  if (existing) throw new Error('Name already taken');
+
+  const updates = { name: trimmed };
+  if (newPassword) updates.password = newPassword;
+
+  const { data, error } = await supabase
+    .from('users')
+    .update(updates)
+    .eq('id', userId)
+    .select()
+    .single();
+
+  if (error) throw error;
+
+  const { password: _, ...safeUser } = data;
+  localStorage.setItem('user', JSON.stringify(safeUser));
+  return safeUser;
+}

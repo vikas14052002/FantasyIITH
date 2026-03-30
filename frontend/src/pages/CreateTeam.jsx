@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { getUser } from '../lib/auth';
 import { hasMatchStarted } from '../lib/matchLock';
+import { TEAM_COLORS, getTeamLogo } from '../lib/teamLogos';
 import './CreateTeam.css';
 
 const ROLES = ['WK', 'BAT', 'AR', 'BOWL'];
@@ -44,6 +45,7 @@ export default function CreateTeam() {
   const [sortKey, setSortKey] = useState('credits');
   const [sortDir, setSortDir] = useState('desc');
   const [showSelectedStrip, setShowSelectedStrip] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
   const navigate = useNavigate();
   const listRef = useRef(null);
   const user = getUser();
@@ -181,27 +183,47 @@ export default function CreateTeam() {
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
         </button>
         <div className="ct-header-info">
-          <span className="ct-match-label">{match?.team1_short} vs {match?.team2_short}</span>
-          <span className="ct-match-sub">{isEditing ? 'Edit Your Team' : 'Create Your Team'}</span>
+          <span className="ct-match-label">{isEditing ? 'Edit Team' : 'Create Team'}</span>
         </div>
-        <div className="ct-header-stats">
-          <div className="ct-stat">
-            <span className="ct-stat-value">{selected.length}<span className="ct-stat-dim">/11</span></span>
-            <span className="ct-stat-label">Players</span>
+        <button className="header-icon-btn" onClick={() => navigate('/points')} title="Points">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        </button>
+      </div>
+
+      {/* Dream11-style team comp bar */}
+      <div className="d11-comp">
+        <div className="d11-comp-col">
+          <span className="d11-comp-label">Players</span>
+          <span className="d11-comp-value">{selected.length}<span className="d11-comp-dim">/11</span></span>
+        </div>
+        <div className="d11-comp-team">
+          {getTeamLogo(match?.team1_short) && <img className="d11-team-logo" src={getTeamLogo(match?.team1_short)} alt="" />}
+          <div>
+            <span className="d11-comp-label">{match?.team1_short}</span>
+            <span className="d11-comp-value">{teamCounts[match?.team1_short] || 0}</span>
           </div>
-          <div className="ct-stat-divider" />
-          <div className="ct-stat">
-            <span className={`ct-stat-value ${remainingCredits < 10 ? 'ct-stat-warn' : ''}`}>{remainingCredits.toFixed(1)}</span>
-            <span className="ct-stat-label">Credits Left</span>
+        </div>
+        <div className="d11-comp-team">
+          {getTeamLogo(match?.team2_short) && <img className="d11-team-logo" src={getTeamLogo(match?.team2_short)} alt="" />}
+          <div>
+            <span className="d11-comp-label">{match?.team2_short}</span>
+            <span className="d11-comp-value">{teamCounts[match?.team2_short] || 0}</span>
           </div>
+        </div>
+        <div className="d11-comp-col">
+          <span className="d11-comp-label">Credits Left</span>
+          <span className={`d11-comp-value ${remainingCredits < 10 ? 'ct-stat-warn' : ''}`}>{remainingCredits.toFixed(1)}</span>
         </div>
       </div>
 
-      {/* Credit progress bar */}
-      <div className="ct-credit-bar">
-        <div className="ct-credit-track">
-          <div className="ct-credit-fill" style={{ width: `${creditPercent}%` }} />
-        </div>
+      {/* Player slot boxes */}
+      <div className="d11-slots">
+        {Array.from({ length: 11 }).map((_, i) => (
+          <div key={i} className={`d11-slot ${i < selected.length ? 'd11-slot-filled' : ''}`}>
+            {i === selected.length - 1 && <span className="d11-slot-num">{selected.length}</span>}
+            {i === 10 && <span className="d11-slot-num">11</span>}
+          </div>
+        ))}
       </div>
 
       {/* Selected players strip */}
@@ -341,33 +363,73 @@ export default function CreateTeam() {
 
       {/* Bottom bar */}
       <div className="ct-bottom-bar">
-        <div className="ct-bottom-info">
-          {selected.length < 11 && !allRolesValid && (
-            <span className="ct-bottom-hint">
-              {ROLES.filter(r => roleCounts[r] < ROLE_LIMITS[r].min).map(r =>
-                `${ROLE_LIMITS[r].min - roleCounts[r]} more ${r}`
-              ).join(', ')} needed
-            </span>
-          )}
-          {selected.length === 11 && !allRolesValid && (
-            <span className="ct-bottom-hint ct-bottom-warn">Role requirements not met</span>
-          )}
-          {selected.length === 11 && allRolesValid && (
-            <span className="ct-bottom-hint ct-bottom-ready">Team ready!</span>
-          )}
-        </div>
-        <button className="btn btn-primary ct-next-btn"
+        <button className="btn btn-outline" style={{ flex: 1 }}
+          disabled={selected.length === 0}
+          onClick={() => setShowPreview(true)}>
+          PREVIEW ({selected.length})
+        </button>
+        <button className="btn btn-primary" style={{ flex: 1 }}
           disabled={selected.length !== 11 || !allRolesValid}
           onClick={() => {
             sessionStorage.setItem('selectedPlayers', JSON.stringify(selected));
+            sessionStorage.setItem('allPlayers', JSON.stringify(players));
             if (existingCaptainId) sessionStorage.setItem('existingCaptainId', existingCaptainId);
             if (existingVcId) sessionStorage.setItem('existingVcId', existingVcId);
-            navigate(`/captain-select/${matchId}/${leagueId}`);
+            navigate(`/backup-select/${matchId}/${leagueId}`);
           }}>
-          CONTINUE
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+          NEXT →
         </button>
       </div>
+
+      {/* Full-screen Field Preview */}
+      {showPreview && (
+        <div className="ct-field-overlay">
+          <div className="ct-field-header">
+            <button className="ct-field-close" onClick={() => setShowPreview(false)}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
+            <span className="ct-field-title">{selected.length}/11 Players</span>
+            <span className="ct-field-credits">{remainingCredits.toFixed(1)} Cr left</span>
+          </div>
+          <div className="ct-field-scroll">
+            <div className="ct-field-pitch">
+              <div className="ct-field-circle" />
+              <div className="ct-field-inner" />
+              <div className="ct-field-boundary" />
+              <div className="ct-field-content">
+                {ROLES.map(role => {
+                  const rolePlayers = selected.filter(p => p.role === role);
+                  return (
+                    <div key={role} className="ct-field-role">
+                      <div className="ct-field-role-tag">{ROLE_LABELS[role]}</div>
+                      <div className="ct-field-players">
+                        {rolePlayers.length === 0 ? (
+                          <div className="ct-field-empty-slot">
+                            <div className="ct-field-empty-dot">?</div>
+                            <span className="ct-field-empty-label">Pick {ROLE_LIMITS[role].min}+</span>
+                          </div>
+                        ) : rolePlayers.map(p => (
+                          <div key={p.player_id} className="ct-field-player">
+                            <div className="ct-field-avatar-wrap">
+                              {p.image_url ? (
+                                <img className="ct-field-avatar" src={p.image_url} alt={p.name} />
+                              ) : (
+                                <div className="ct-field-avatar-fb">{p.name.split(' ').map(n => n[0]).join('').slice(0, 2)}</div>
+                              )}
+                            </div>
+                            <div className="ct-field-name-pill">{p.name.split(' ').pop()}</div>
+                            <div className="ct-field-cr">{p.credits}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 

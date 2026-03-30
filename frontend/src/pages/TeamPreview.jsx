@@ -14,6 +14,7 @@ export default function TeamPreview() {
   const [players, setPlayers] = useState([]);
   const [dreamIds, setDreamIds] = useState(new Set());
   const [loading, setLoading] = useState(true);
+  const [showBench, setShowBench] = useState(false);
   const navigate = useNavigate();
   const user = getUser();
 
@@ -96,8 +97,11 @@ export default function TeamPreview() {
     );
   }
 
+  const starters = players.filter(p => !p.is_backup);
+  const backups = players.filter(p => p.is_backup).sort((a, b) => (a.backup_order || 99) - (b.backup_order || 99));
+
   const grouped = {};
-  players.forEach(p => {
+  starters.forEach(p => {
     if (!grouped[p.role]) grouped[p.role] = [];
     grouped[p.role].push(p);
   });
@@ -106,8 +110,8 @@ export default function TeamPreview() {
   const match = team.matches;
   const team1 = match?.team1_short;
   const team2 = match?.team2_short;
-  const team1Count = players.filter(p => p.team === team1).length;
-  const team2Count = players.filter(p => p.team === team2).length;
+  const team1Count = starters.filter(p => p.team === team1).length;
+  const team2Count = starters.filter(p => p.team === team2).length;
 
   return (
     <div className="preview-page">
@@ -200,6 +204,52 @@ export default function TeamPreview() {
           </div>
         </div>
       </div>
+
+      {/* Bench toggle button */}
+      {backups.length > 0 && (
+        <div className="preview-bench-toggle" onClick={() => setShowBench(true)}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Bench ({backups.length})
+        </div>
+      )}
+
+      {/* Bench slider overlay */}
+      {showBench && (
+        <>
+          <div className="preview-bench-overlay" onClick={() => setShowBench(false)} />
+          <div className="preview-bench-slider">
+            <div className="preview-bench-slider-header">
+              <span className="preview-bench-slider-title">Bench Players</span>
+              <button className="preview-bench-close" onClick={() => setShowBench(false)}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+              </button>
+            </div>
+            <div className="preview-bench-slider-list">
+              {backups.map((p, i) => {
+                const img = getImage(p.player_id);
+                const pts = getPoints(p.player_id);
+                return (
+                  <div key={p.player_id} className="preview-bench-player">
+                    <span className="preview-bench-num">{i + 1}</span>
+                    {img ? (
+                      <img className="preview-bench-img" src={img} alt={p.name} />
+                    ) : (
+                      <div className="preview-bench-fb">{p.name.split(' ').map(n => n[0]).join('').slice(0, 2)}</div>
+                    )}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600 }}>{p.name}</div>
+                      <div style={{ fontSize: 10, color: 'var(--text-secondary)' }}>{p.team} • {p.role}</div>
+                    </div>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: pts > 0 ? 'var(--green)' : 'var(--text-muted)' }}>
+                      {pts > 0 ? `${pts}` : '-'}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Fixed bottom actions */}
       <div className="preview-bottom">

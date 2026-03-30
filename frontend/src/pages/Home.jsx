@@ -13,9 +13,7 @@ export default function Home() {
   const navigate = useNavigate();
   const user = getUser();
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  useEffect(() => { loadData(); }, []);
 
   async function loadData() {
     const [matchRes, leagueRes] = await Promise.all([
@@ -27,7 +25,16 @@ export default function Home() {
     setLoading(false);
   }
 
-  const filtered = matches.filter(m => m.status === activeTab);
+  const tabCounts = {
+    upcoming: matches.filter(m => m.status === 'upcoming').length,
+    live: matches.filter(m => m.status === 'live').length,
+    completed: matches.filter(m => m.status === 'completed').length,
+  };
+
+  const filtered = matches.filter(m => m.status === activeTab).sort((a, b) => {
+    if (activeTab === 'upcoming') return new Date(a.start_time) - new Date(b.start_time);
+    return new Date(b.start_time) - new Date(a.start_time);
+  });
   const firstLeague = leagues[0];
 
   if (loading) return <div className="loader"><div className="spinner" /></div>;
@@ -39,11 +46,11 @@ export default function Home() {
           <h2 className="section-title">Matches</h2>
         </div>
         <div className="tabs">
-          {['upcoming', 'live', 'completed'].map(tab => (
+          {['live', 'upcoming', 'completed'].map(tab => (
             <button key={tab} className={`tab ${activeTab === tab ? 'active' : ''}`}
               onClick={() => setActiveTab(tab)}>
               {tab.charAt(0).toUpperCase() + tab.slice(1)}
-              {tab === 'live' && matches.some(m => m.status === 'live') && ' ●'}
+              {tabCounts[tab] > 0 && <span className="tab-badge">{tabCounts[tab]}</span>}
             </button>
           ))}
         </div>

@@ -1,12 +1,17 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getUser, logout } from '../lib/auth';
+import { getUser, logout, updateProfile } from '../lib/auth';
 import './Header.css';
 
 export default function Header() {
-  const user = getUser();
+  const [user, setUser] = useState(getUser());
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editPassword, setEditPassword] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [saveMsg, setSaveMsg] = useState('');
   const [confirmLogout, setConfirmLogout] = useState(false);
   const menuRef = useRef(null);
 
@@ -15,6 +20,8 @@ export default function Header() {
       if (menuRef.current && !menuRef.current.contains(e.target)) {
         setOpen(false);
         setConfirmLogout(false);
+        setEditing(false);
+        setSaveMsg('');
       }
     }
     document.addEventListener('mousedown', handleClick);
@@ -30,15 +37,45 @@ export default function Header() {
     navigate('/login');
   };
 
+  const startEdit = () => {
+    setEditing(true);
+    setEditName(user.name);
+    setEditPassword('');
+    setSaveMsg('');
+  };
+
+  const handleSave = async () => {
+    if (!editName.trim()) return;
+    setSaving(true);
+    setSaveMsg('');
+    try {
+      const updated = await updateProfile(user.id, editName.trim(), editPassword || null);
+      setUser(updated);
+      setSaveMsg('Saved!');
+      setTimeout(() => {
+        setEditing(false);
+        setSaveMsg('');
+      }, 1000);
+    } catch (err) {
+      setSaveMsg(err.message || 'Failed to save');
+    }
+    setSaving(false);
+  };
+
   return (
     <header className="app-header">
       <div className="header-logo">
         <span className="logo-icon">🏏</span>
-        <span className="logo-text">Fantasy<span className="logo-accent">IITH</span></span>
+        <span className="logo-text">Play<span className="logo-accent">XI</span></span>
       </div>
       {user && (
         <div className="header-right" ref={menuRef}>
-          <button className="header-refresh" onClick={() => window.location.reload()} title="Refresh">
+          <button className="header-icon-btn" onClick={() => navigate('/points')} title="Points System">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+          </button>
+          <button className="header-icon-btn" onClick={() => window.location.reload()} title="Refresh">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
             </svg>
@@ -46,41 +83,93 @@ export default function Header() {
           <div
             className="header-avatar"
             style={{ background: user.avatar_color }}
-            onClick={() => { setOpen(!open); setConfirmLogout(false); }}
+            onClick={() => { setOpen(!open); setConfirmLogout(false); setEditing(false); setSaveMsg(''); }}
           >
             {user.name[0].toUpperCase()}
           </div>
 
           {open && (
             <div className="profile-menu fade-in">
-              <div className="profile-menu-header">
-                <div className="profile-menu-avatar" style={{ background: user.avatar_color }}>
-                  {user.name[0].toUpperCase()}
+              {!editing ? (
+                <>
+                  <div className="profile-menu-header">
+                    <div className="profile-menu-avatar" style={{ background: user.avatar_color }}>
+                      {user.name[0].toUpperCase()}
+                    </div>
+                    <div className="profile-menu-details">
+                      <span className="profile-menu-name">{user.name}</span>
+                      <span className="profile-menu-role">Player</span>
+                    </div>
+                  </div>
+
+                  <div className="profile-menu-divider" />
+
+                  <button className="profile-menu-item" onClick={startEdit}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    Edit Profile
+                  </button>
+
+                  <button className="profile-menu-item" onClick={() => { navigate('/my-teams'); setOpen(false); }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    My Teams
+                  </button>
+
+                  <button className="profile-menu-item" onClick={() => { navigate('/leagues'); setOpen(false); }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>
+                    My Leagues
+                  </button>
+
+                  <button className="profile-menu-item" onClick={() => { navigate('/feedback'); setOpen(false); }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                    Feedback
+                  </button>
+
+                  <div className="profile-menu-divider" />
+
+                  <button className={`profile-menu-item profile-logout ${confirmLogout ? 'confirm' : ''}`} onClick={handleLogout}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                    {confirmLogout ? 'Tap again to confirm' : 'Logout'}
+                  </button>
+                </>
+              ) : (
+                /* ── Edit Profile Mode ── */
+                <div className="profile-edit">
+                  <div className="profile-edit-title">Edit Profile</div>
+                  <div className="profile-edit-field">
+                    <label className="profile-edit-label">Name</label>
+                    <input
+                      className="input profile-edit-input"
+                      type="text"
+                      value={editName}
+                      onChange={e => setEditName(e.target.value)}
+                      placeholder="Your name"
+                    />
+                  </div>
+                  <div className="profile-edit-field">
+                    <label className="profile-edit-label">New Password</label>
+                    <input
+                      className="input profile-edit-input"
+                      type="password"
+                      value={editPassword}
+                      onChange={e => setEditPassword(e.target.value)}
+                      placeholder="Leave blank to keep current"
+                    />
+                  </div>
+                  {saveMsg && (
+                    <div className={`profile-edit-msg ${saveMsg === 'Saved!' ? 'success' : 'error'}`}>
+                      {saveMsg}
+                    </div>
+                  )}
+                  <div className="profile-edit-actions">
+                    <button className="btn btn-outline profile-edit-btn" onClick={() => { setEditing(false); setSaveMsg(''); }}>
+                      Cancel
+                    </button>
+                    <button className="btn btn-primary profile-edit-btn" onClick={handleSave} disabled={saving || !editName.trim()}>
+                      {saving ? 'Saving...' : 'Save'}
+                    </button>
+                  </div>
                 </div>
-                <div className="profile-menu-details">
-                  <span className="profile-menu-name">{user.name}</span>
-                  <span className="profile-menu-role">Player</span>
-                </div>
-              </div>
-
-              <div className="profile-menu-divider" />
-
-              <button className="profile-menu-item" onClick={() => { navigate('/my-teams'); setOpen(false); }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                My Teams
-              </button>
-
-              <button className="profile-menu-item" onClick={() => { navigate('/leagues'); setOpen(false); }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>
-                My Leagues
-              </button>
-
-              <div className="profile-menu-divider" />
-
-              <button className={`profile-menu-item profile-logout ${confirmLogout ? 'confirm' : ''}`} onClick={handleLogout}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-                {confirmLogout ? 'Tap again to confirm' : 'Logout'}
-              </button>
+              )}
             </div>
           )}
         </div>

@@ -88,6 +88,88 @@
   background: var(--border);
 }
 
+/* ── Dream11-style Composition Bar ── */
+.d11-comp {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: var(--bg-surface);
+  gap: 8px;
+}
+
+.d11-comp-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+
+.d11-comp-team {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.d11-team-logo {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  border-radius: 50%;
+}
+
+.d11-comp-label {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  display: block;
+  text-align: center;
+}
+
+.d11-comp-value {
+  font-size: 18px;
+  font-weight: 700;
+  display: block;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.d11-comp-dim {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+/* ── Player Slot Boxes ── */
+.d11-slots {
+  display: flex;
+  gap: 3px;
+  padding: 8px 16px 10px;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.d11-slot {
+  flex: 1;
+  height: 22px;
+  border-radius: 4px;
+  background: var(--bg-elevated);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.d11-slot-filled {
+  background: var(--green);
+}
+
+.d11-slot-num {
+  font-size: 9px;
+  font-weight: 700;
+  color: #fff;
+}
+
 /* ── Credit Progress Bar ── */
 .ct-credit-bar {
   padding: 0 16px;
@@ -528,8 +610,8 @@
   background: var(--bg-surface);
   border-top: 1px solid var(--border);
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  flex-direction: row;
+  gap: 10px;
   z-index: 90;
 }
 
@@ -554,4 +636,210 @@
 
 .ct-next-btn {
   gap: 6px;
+}
+
+/* ── Full-screen Field Preview ── */
+.ct-field-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: var(--bg-primary);
+  display: flex;
+  flex-direction: column;
+  animation: fadeIn 0.2s ease;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.ct-field-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.ct-field-close {
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+}
+
+.ct-field-title {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.ct-field-credits {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.ct-field-scroll {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.ct-field-pitch {
+  position: relative;
+  min-height: 520px;
+  background: linear-gradient(180deg, #0a4d2c 0%, #0d6b3a 30%, #0a5e32 60%, #074d28 100%);
+  padding: 16px 8px;
+  overflow: hidden;
+}
+
+.ct-field-circle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 220px;
+  height: 220px;
+  border: 1.5px solid rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+}
+
+.ct-field-inner {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 80px;
+  height: 80px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 50%;
+}
+
+.ct-field-boundary {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  border: 1.5px solid rgba(255, 255, 255, 0.06);
+  border-radius: 50%;
+}
+
+.ct-field-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 480px;
+  padding: 4px 0;
+}
+
+.ct-field-role {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.ct-field-role-tag {
+  font-size: 8px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.35);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+}
+
+.ct-field-players {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  flex-wrap: nowrap;
+}
+
+.ct-field-player {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  width: 58px;
+}
+
+.ct-field-avatar-wrap {
+  width: 42px;
+  height: 42px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
+}
+
+.ct-field-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2.5px solid #fff;
+  background: var(--bg-elevated);
+}
+
+.ct-field-avatar-fb {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.15);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.ct-field-name-pill {
+  font-size: 8px;
+  font-weight: 700;
+  padding: 2px 5px;
+  border-radius: 3px;
+  background: #fff;
+  color: #1a1a2e;
+  white-space: nowrap;
+  max-width: 56px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+}
+
+.ct-field-cr {
+  font-size: 8px;
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 600;
+}
+
+/* Empty slot */
+.ct-field-empty-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.ct-field-empty-dot {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px dashed rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.2);
+  font-weight: 700;
+}
+
+.ct-field-empty-label {
+  font-size: 8px;
+  color: rgba(255, 255, 255, 0.25);
+  font-weight: 600;
 }

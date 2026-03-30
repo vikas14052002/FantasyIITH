@@ -10,12 +10,15 @@ import JoinLeague from './pages/JoinLeague';
 import LeagueDetail from './pages/LeagueDetail';
 import MyTeams from './pages/MyTeams';
 import CreateTeam from './pages/CreateTeam';
+import BackupSelect from './pages/BackupSelect';
 import CaptainSelect from './pages/CaptainSelect';
 import TeamPreview from './pages/TeamPreview';
 import Leaderboard from './pages/Leaderboard';
 import TeamCompare from './pages/TeamCompare';
 import MatchDetail from './pages/MatchDetail';
 import Admin from './pages/Admin';
+import PointsSystem from './pages/PointsSystem';
+import Feedback from './pages/Feedback';
 
 function ProtectedRoute({ children }) {
   const user = getUser();
@@ -45,12 +48,15 @@ export default function App() {
         <Route path="/leagues/:id" element={<ProtectedRoute><AppShell><LeagueDetail /></AppShell></ProtectedRoute>} />
         <Route path="/my-teams" element={<ProtectedRoute><AppShell><MyTeams /></AppShell></ProtectedRoute>} />
         <Route path="/create-team/:matchId/:leagueId" element={<ProtectedRoute><CreateTeam /></ProtectedRoute>} />
+        <Route path="/backup-select/:matchId/:leagueId" element={<ProtectedRoute><BackupSelect /></ProtectedRoute>} />
         <Route path="/captain-select/:matchId/:leagueId" element={<ProtectedRoute><CaptainSelect /></ProtectedRoute>} />
         <Route path="/team-preview/:teamId" element={<ProtectedRoute><TeamPreview /></ProtectedRoute>} />
         <Route path="/leaderboard" element={<ProtectedRoute><AppShell><Leaderboard /></AppShell></ProtectedRoute>} />
         <Route path="/compare/:leagueId" element={<ProtectedRoute><AppShell><TeamCompare /></AppShell></ProtectedRoute>} />
         <Route path="/match/:id" element={<ProtectedRoute><AppShell><MatchDetail /></AppShell></ProtectedRoute>} />
         <Route path="/admin" element={<ProtectedRoute><AppShell><Admin /></AppShell></ProtectedRoute>} />
+        <Route path="/points" element={<ProtectedRoute><PointsSystem /></ProtectedRoute>} />
+        <Route path="/feedback" element={<ProtectedRoute><Feedback /></ProtectedRoute>} />
         <Route path="*" element={<Navigate to="/home" replace />} />
       </Routes>
     </BrowserRouter>

@@ -55,7 +55,7 @@
   transform: scale(0.92);
 }
 
-.header-refresh {
+.header-icon-btn {
   background: none;
   border: none;
   color: var(--text-secondary);
@@ -68,7 +68,7 @@
   transition: all 0.2s;
 }
 
-.header-refresh:active {
+.header-icon-btn:active {
   transform: rotate(180deg);
   color: var(--red-primary);
 }
@@ -160,4 +160,55 @@
 .profile-logout.confirm {
   color: var(--red-primary);
   background: rgba(209, 30, 54, 0.08);
+}
+
+/* ── Edit Profile ── */
+.profile-edit {
+  padding: 14px;
+}
+
+.profile-edit-title {
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.profile-edit-field {
+  margin-bottom: 10px;
+}
+
+.profile-edit-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.profile-edit-input {
+  min-height: 38px;
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+.profile-edit-msg {
+  font-size: 11px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.profile-edit-msg.success { color: var(--green); }
+.profile-edit-msg.error { color: var(--coral); }
+
+.profile-edit-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.profile-edit-btn {
+  flex: 1;
+  min-height: 36px;
+  font-size: 12px;
+  padding: 6px 12px;
 }

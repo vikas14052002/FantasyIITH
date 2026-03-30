@@ -31,8 +31,8 @@ export default function Login() {
       <div className="login-content fade-in">
         <div className="login-logo">
           <span className="login-emoji">🏏</span>
-          <h1 className="login-title">Fantasy<span className="login-accent">IITH</span></h1>
-          <p className="login-subtitle">IPL Fantasy Cricket League</p>
+          <h1 className="login-title">Play<span className="login-accent">XI</span></h1>
+          <p className="login-subtitle">Fantasy Cricket League</p>
         </div>
 
         <form onSubmit={handleSubmit} className="login-form">

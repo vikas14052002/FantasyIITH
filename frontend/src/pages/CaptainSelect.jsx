@@ -11,6 +11,8 @@ export default function CaptainSelect() {
 
   const stored = sessionStorage.getItem('selectedPlayers');
   const players = stored ? JSON.parse(stored) : [];
+  const storedBackups = sessionStorage.getItem('backupPlayers');
+  const backupPlayers = storedBackups ? JSON.parse(storedBackups) : [];
 
   const storedCaptain = sessionStorage.getItem('existingCaptainId');
   const storedVc = sessionStorage.getItem('existingVcId');
@@ -76,10 +78,30 @@ export default function CaptainSelect() {
             credits: p.credits,
             is_captain: p.player_id === captainId,
             is_vice_captain: p.player_id === vcId,
+            is_backup: false,
+            backup_order: null,
           }));
+
+          // Add backups
+          backupPlayers.forEach((p, i) => {
+            teamPlayers.push({
+              team_id: existing.id,
+              player_id: p.player_id,
+              name: p.name,
+              team: p.team,
+              role: p.role,
+              credits: p.credits,
+              is_captain: false,
+              is_vice_captain: false,
+              is_backup: true,
+              backup_order: i + 1,
+            });
+          });
 
           await supabase.from('team_players').insert(teamPlayers);
           sessionStorage.removeItem('selectedPlayers');
+          sessionStorage.removeItem('backupPlayers');
+          sessionStorage.removeItem('allPlayers');
           sessionStorage.removeItem('existingCaptainId');
           sessionStorage.removeItem('existingVcId');
           navigate(`/team-preview/${existing.id}`);
@@ -91,7 +113,7 @@ export default function CaptainSelect() {
       return;
     }
 
-    // Insert team players
+    // Insert team players (11 starters + backups)
     const teamPlayers = players.map(p => ({
       team_id: team.id,
       player_id: p.player_id,
@@ -101,12 +123,31 @@ export default function CaptainSelect() {
       credits: p.credits,
       is_captain: p.player_id === captainId,
       is_vice_captain: p.player_id === vcId,
+      is_backup: false,
+      backup_order: null,
     }));
+
+    backupPlayers.forEach((p, i) => {
+      teamPlayers.push({
+        team_id: team.id,
+        player_id: p.player_id,
+        name: p.name,
+        team: p.team,
+        role: p.role,
+        credits: p.credits,
+        is_captain: false,
+        is_vice_captain: false,
+        is_backup: true,
+        backup_order: i + 1,
+      });
+    });
 
     const { error: playersError } = await supabase.from('team_players').insert(teamPlayers);
     if (playersError) { alert(playersError.message); setSaving(false); return; }
 
     sessionStorage.removeItem('selectedPlayers');
+    sessionStorage.removeItem('backupPlayers');
+    sessionStorage.removeItem('allPlayers');
     navigate(`/team-preview/${team.id}`);
   };
 
@@ -121,6 +162,26 @@ export default function CaptainSelect() {
         <button className="ct-back" onClick={() => navigate(-1)}>←</button>
         <div className="ct-header-info">
           <span className="ct-match-label">Choose Captain & Vice Captain</span>
+        </div>
+      </div>
+
+      {/* Stepper */}
+      <div className="ct-stepper">
+        <div className="ct-step done">
+          <div className="ct-step-dot done">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+          </div>
+          <span className="ct-step-label">Pick Players</span>
+        </div>
+        <div className="ct-step-line done" />
+        <div className="ct-step active">
+          <div className="ct-step-dot active">2</div>
+          <span className="ct-step-label">Captain</span>
+        </div>
+        <div className="ct-step-line" />
+        <div className="ct-step">
+          <div className="ct-step-dot">3</div>
+          <span className="ct-step-label">Done</span>
         </div>
       </div>
 

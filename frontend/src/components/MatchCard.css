@@ -1,11 +1,25 @@
+/* Gradient border wrapper */
 .match-card {
+  position: relative;
+  border-radius: var(--radius-lg);
+  padding: 2px;
+  background: linear-gradient(135deg, var(--mc-color1), transparent 40%, transparent 60%, var(--mc-color2));
+  margin-bottom: 12px;
   cursor: pointer;
   transition: transform 0.15s;
-  margin-bottom: 12px;
 }
 
 .match-card:active {
   transform: scale(0.98);
+}
+
+/* Glassmorphism inner card */
+.match-card-inner {
+  background: rgba(28, 28, 46, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-radius: calc(var(--radius-lg) - 2px);
+  padding: 16px;
 }
 
 .match-card-header {
@@ -25,7 +39,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 14px;
+  margin-bottom: 10px;
 }
 
 .match-team {
@@ -75,12 +89,23 @@
   padding: 0 8px;
 }
 
+.match-card-venue {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
 .match-card-footer {
   display: flex;
   align-items: center;
   justify-content: center;
   padding-top: 10px;
   border-top: 1px solid var(--border);
+  gap: 8px;
 }
 
 .match-result {
@@ -91,10 +116,6 @@
 
 .match-result.live {
   color: var(--green);
-}
-
-.match-card-footer {
-  gap: 8px;
 }
 
 .mc-team-status {

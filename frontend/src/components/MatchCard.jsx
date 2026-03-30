@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import CountdownTimer from './CountdownTimer';
-import { getTeamLogo } from '../lib/teamLogos';
+import { getTeamLogo, TEAM_COLORS } from '../lib/teamLogos';
 import { getUser } from '../lib/auth';
 import { supabase } from '../lib/supabase';
 import './MatchCard.css';
@@ -34,53 +34,68 @@ export default function MatchCard({ match, leagueId }) {
 
   const logo1 = getTeamLogo(match.team1_short);
   const logo2 = getTeamLogo(match.team2_short);
+  const color1 = TEAM_COLORS[match.team1_short] || 'var(--border)';
+  const color2 = TEAM_COLORS[match.team2_short] || 'var(--border)';
 
   return (
-    <div className="match-card card fade-in" onClick={handleClick}>
-      <div className="match-card-header">
-        <span className="match-label">Match {match.match_number} • IPL 2026</span>
-        <span className={`badge badge-${match.status}`}>
-          {match.status === 'live' ? '● LIVE' : match.status.toUpperCase()}
-        </span>
-      </div>
-
-      <div className="match-card-teams">
-        <div className="match-team">
-          {logo1 ? (
-            <img className="team-logo" src={logo1} alt={match.team1_short} />
-          ) : (
-            <div className="team-badge">{match.team1_short}</div>
-          )}
-          <span className="team-name">{match.team1_short}</span>
-          {match.team1_score && <span className="team-score">{match.team1_score}</span>}
+    <div
+      className="match-card fade-in"
+      onClick={handleClick}
+      style={{ '--mc-color1': color1, '--mc-color2': color2 }}
+    >
+      <div className="match-card-inner">
+        <div className="match-card-header">
+          <span className="match-label">Match {match.match_number} • PlayXI</span>
+          <span className={`badge badge-${match.status}`}>
+            {match.status === 'live' ? '● LIVE' : match.status.toUpperCase()}
+          </span>
         </div>
-        <div className="match-vs">VS</div>
-        <div className="match-team">
-          {logo2 ? (
-            <img className="team-logo" src={logo2} alt={match.team2_short} />
-          ) : (
-            <div className="team-badge">{match.team2_short}</div>
-          )}
-          <span className="team-name">{match.team2_short}</span>
-          {match.team2_score && <span className="team-score">{match.team2_score}</span>}
-        </div>
-      </div>
 
-      <div className="match-card-footer">
-        {match.status === 'upcoming' ? (
-          <>
-            <CountdownTimer targetDate={match.start_time} />
-            {leagueId && (
-              <span className={`mc-team-status ${existingTeam ? 'mc-has-team' : ''}`}>
-                {existingTeam ? 'Edit Team' : 'Create Team'}
-              </span>
+        <div className="match-card-teams">
+          <div className="match-team">
+            {logo1 ? (
+              <img className="team-logo" src={logo1} alt={match.team1_short} />
+            ) : (
+              <div className="team-badge">{match.team1_short}</div>
             )}
-          </>
-        ) : match.status === 'completed' ? (
-          <span className="match-result">{match.result || 'Completed'}</span>
-        ) : (
-          <span className="match-result live">In Progress</span>
+            <span className="team-name">{match.team1_short}</span>
+            {match.team1_score && <span className="team-score">{match.team1_score}</span>}
+          </div>
+          <div className="match-vs">VS</div>
+          <div className="match-team">
+            {logo2 ? (
+              <img className="team-logo" src={logo2} alt={match.team2_short} />
+            ) : (
+              <div className="team-badge">{match.team2_short}</div>
+            )}
+            <span className="team-name">{match.team2_short}</span>
+            {match.team2_score && <span className="team-score">{match.team2_score}</span>}
+          </div>
+        </div>
+
+        {match.venue && match.venue !== 'TBD' && (
+          <div className="match-card-venue">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            {match.venue}
+          </div>
         )}
+
+        <div className="match-card-footer">
+          {match.status === 'upcoming' ? (
+            <>
+              <CountdownTimer targetDate={match.start_time} />
+              {leagueId && (
+                <span className={`mc-team-status ${existingTeam ? 'mc-has-team' : ''}`}>
+                  {existingTeam ? 'Edit Team' : 'Create Team'}
+                </span>
+              )}
+            </>
+          ) : match.status === 'completed' ? (
+            <span className="match-result">{match.result || 'Completed'}</span>
+          ) : (
+            <span className="match-result live">In Progress</span>
+          )}
+        </div>
       </div>
     </div>
   );
