@@ -1,0 +1,78 @@
+.captain-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-primary);
+}
+
+.captain-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px 16px;
+  background: var(--bg-surface);
+  font-size: 12px;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border);
+}
+
+.captain-list {
+  flex: 1;
+  padding: 0 16px;
+  padding-bottom: 80px;
+  overflow-y: auto;
+}
+
+.captain-player-img {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 2px solid var(--border);
+  background: var(--bg-elevated);
+}
+
+.captain-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.captain-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.captain-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: 'Poppins', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.captain-btn.captain-active {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: #000;
+}
+
+.captain-btn.vc-active {
+  background: var(--blue);
+  border-color: var(--blue);
+  color: white;
+}

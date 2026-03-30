@@ -1,0 +1,269 @@
+.cmp-selectors {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.cmp-user-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.cmp-vs-label {
+  color: var(--text-muted);
+  font-weight: 700;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+/* Score strip */
+.cmp-score-strip {
+  display: flex;
+  align-items: center;
+  padding: 16px 12px;
+  margin-bottom: 16px;
+}
+
+.cmp-score-side {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+}
+
+.cmp-score-right {
+  justify-content: flex-end;
+}
+
+.cmp-score-name {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: capitalize;
+  color: var(--text-secondary);
+}
+
+.cmp-score-pts {
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.cmp-winner .cmp-score-pts {
+  color: var(--green);
+}
+
+.cmp-score-center {
+  text-align: center;
+  padding: 0 12px;
+  flex-shrink: 0;
+}
+
+.cmp-score-diff {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--coral);
+}
+
+.cmp-score-diff-label {
+  font-size: 8px;
+  color: var(--text-muted);
+}
+
+/* Section headers */
+.cmp-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--bg-elevated);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.cmp-section-count {
+  background: var(--bg-modal);
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-size: 12px;
+  color: var(--text-primary);
+}
+
+/* Different players: 2 columns */
+.cmp-diff-grid {
+  display: flex;
+  margin-bottom: 16px;
+}
+
+.cmp-diff-col {
+  flex: 1;
+}
+
+.cmp-diff-divider {
+  width: 1px;
+  background: var(--border);
+  margin: 0 2px;
+}
+
+.cmp-empty-col {
+  text-align: center;
+  padding: 16px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+/* Player card in diff section */
+.cmp-pcard {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.cmp-pcard.right {
+  flex-direction: row-reverse;
+  text-align: right;
+}
+
+.cmp-pcard-img {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 2px solid var(--border);
+}
+
+.cmp-pcard-fb {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--bg-elevated);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.cmp-pcard-info {
+  min-width: 0;
+}
+
+.cmp-pcard-name {
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.cmp-pcard.right .cmp-pcard-name {
+  justify-content: flex-end;
+}
+
+.cmp-pcard-meta {
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+
+/* Badges */
+.cmp-badge-c {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  font-size: 8px;
+  font-weight: 800;
+  background: var(--gold);
+  color: #000;
+  flex-shrink: 0;
+}
+
+.cmp-badge-vc {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  font-size: 7px;
+  font-weight: 800;
+  background: var(--blue);
+  color: #fff;
+  flex-shrink: 0;
+}
+
+/* Common players */
+.cmp-common-list {
+  margin-bottom: 16px;
+}
+
+.cmp-common-row {
+  display: flex;
+  align-items: center;
+  padding: 10px 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+.cmp-common-side {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 56px;
+  justify-content: flex-end;
+}
+
+.cmp-common-side-r {
+  justify-content: flex-start;
+}
+
+.cmp-common-mid {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.cmp-common-img {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--teal);
+}
+
+.cmp-common-fb {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--bg-elevated);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.cmp-common-name {
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.cmp-common-role {
+  font-size: 9px;
+  color: var(--text-secondary);
+}
+
+.cmp-pts {
+  font-size: 14px;
+  font-weight: 700;
+}

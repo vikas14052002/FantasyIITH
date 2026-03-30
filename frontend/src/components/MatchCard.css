@@ -1,0 +1,105 @@
+.match-card {
+  cursor: pointer;
+  transition: transform 0.15s;
+  margin-bottom: 12px;
+}
+
+.match-card:active {
+  transform: scale(0.98);
+}
+
+.match-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.match-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.match-card-teams {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.match-team {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+}
+
+.team-logo {
+  width: 48px;
+  height: 36px;
+  object-fit: contain;
+}
+
+.team-badge {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--bg-elevated);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  border: 2px solid var(--border);
+}
+
+.team-name {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.match-vs {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  padding: 0 8px;
+}
+
+.match-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.match-result {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.match-result.live {
+  color: var(--green);
+}
+
+.match-card-footer {
+  gap: 8px;
+}
+
+.mc-team-status {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--teal);
+  background: rgba(6, 152, 167, 0.12);
+  padding: 3px 10px;
+  border-radius: 10px;
+}
+
+.mc-team-status.mc-has-team {
+  color: var(--green);
+  background: rgba(76, 175, 80, 0.12);
+}

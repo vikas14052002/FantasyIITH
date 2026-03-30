@@ -1,0 +1,316 @@
+.preview-page {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-primary);
+  overflow: hidden;
+}
+
+/* Header */
+.preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.preview-back {
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  font-size: 20px;
+  cursor: pointer;
+  width: 32px;
+}
+
+.preview-header-center {
+  text-align: center;
+}
+
+.preview-match-title {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+/* Composition bar */
+.preview-comp-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 16px;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.preview-comp-team {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.preview-comp-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+}
+
+.preview-comp-count {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.preview-comp-credits {
+  margin-left: auto;
+  font-size: 11px;
+}
+
+/* Scrollable field wrapper */
+.preview-field-wrapper {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Cricket Field */
+.preview-field {
+  position: relative;
+  background: linear-gradient(
+    180deg,
+    #145A1E 0%,
+    #1B6B25 15%,
+    #22802E 30%,
+    #1B6B25 45%,
+    #22802E 60%,
+    #1B6B25 75%,
+    #145A1E 100%
+  );
+  overflow: hidden;
+  min-height: 500px;
+  padding: 16px 0;
+}
+
+/* Striped grass pattern */
+.preview-field::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    180deg,
+    transparent,
+    transparent 30px,
+    rgba(0, 0, 0, 0.03) 30px,
+    rgba(0, 0, 0, 0.03) 60px
+  );
+  pointer-events: none;
+}
+
+/* Pitch strip in center */
+.field-pitch {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 22px;
+  height: 120px;
+  background: #C4A36E;
+  border-radius: 2px;
+  opacity: 0.5;
+}
+
+/* 30-yard circle */
+.field-circle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 220px;
+  height: 220px;
+  border: 1.5px solid rgba(255, 255, 255, 0.12);
+  border-radius: 50%;
+}
+
+/* Inner circle */
+.field-inner-circle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 80px;
+  height: 80px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 50%;
+}
+
+/* Crease lines */
+.field-crease {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 30px;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.field-crease-top { top: calc(50% - 60px); }
+.field-crease-bottom { top: calc(50% + 60px); }
+
+/* Boundary */
+.field-boundary {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  border: 1.5px solid rgba(255, 255, 255, 0.08);
+  border-radius: 50%;
+}
+
+/* Field content - player rows */
+.field-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 480px;
+  padding: 8px 0;
+}
+
+/* Role row */
+.preview-role-row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.preview-role-tag {
+  font-size: 8px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.35);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-bottom: 2px;
+}
+
+.preview-players-row {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  flex-wrap: nowrap;
+}
+
+/* Individual player */
+.preview-player {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 56px;
+}
+
+/* Player avatar wrapper */
+.preview-avatar-wrap {
+  position: relative;
+  width: 42px;
+  height: 42px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
+}
+
+.preview-avatar-img {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2.5px solid #fff;
+  background: var(--bg-elevated);
+}
+
+.preview-avatar-fallback {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  border: 2.5px solid rgba(255, 255, 255, 0.3);
+}
+
+/* C/VC Badge */
+.preview-badge {
+  position: absolute;
+  bottom: -2px;
+  right: -4px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  font-weight: 800;
+  z-index: 3;
+  border: 1.5px solid rgba(0, 0, 0, 0.2);
+}
+
+.preview-badge-c {
+  background: var(--gold);
+  color: #000;
+}
+
+.preview-badge-vc {
+  background: var(--blue);
+  color: #fff;
+}
+
+/* Name pill */
+.preview-name-pill {
+  font-size: 8px;
+  font-weight: 700;
+  padding: 2px 5px;
+  border-radius: 3px;
+  white-space: nowrap;
+  max-width: 56px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+  line-height: 1.3;
+}
+
+.pill-team1 {
+  background: #ffffff;
+  color: #1a1a2e;
+}
+
+.pill-team2 {
+  background: #1a1a2e;
+  color: #ffffff;
+  border: 0.5px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Points */
+.preview-pts {
+  font-size: 8px;
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 600;
+}
+
+/* Fixed bottom bar */
+.preview-bottom {
+  display: flex;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--bg-surface);
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom));
+}
