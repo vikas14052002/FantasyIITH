@@ -52,6 +52,7 @@ export default function MatchCard({ match, leagueId }) {
             <div className="team-badge">{match.team1_short}</div>
           )}
           <span className="team-name">{match.team1_short}</span>
+          {match.team1_score && <span className="team-score">{match.team1_score}</span>}
         </div>
         <div className="match-vs">VS</div>
         <div className="match-team">
@@ -61,6 +62,7 @@ export default function MatchCard({ match, leagueId }) {
             <div className="team-badge">{match.team2_short}</div>
           )}
           <span className="team-name">{match.team2_short}</span>
+          {match.team2_score && <span className="team-score">{match.team2_score}</span>}
         </div>
       </div>
 
@@ -75,7 +77,7 @@ export default function MatchCard({ match, leagueId }) {
             )}
           </>
         ) : match.status === 'completed' ? (
-          <span className="match-result">Completed</span>
+          <span className="match-result">{match.result || 'Completed'}</span>
         ) : (
           <span className="match-result live">In Progress</span>
         )}

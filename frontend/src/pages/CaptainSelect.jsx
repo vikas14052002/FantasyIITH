@@ -12,8 +12,16 @@ export default function CaptainSelect() {
   const stored = sessionStorage.getItem('selectedPlayers');
   const players = stored ? JSON.parse(stored) : [];
 
-  const [captainId, setCaptainId] = useState(null);
-  const [vcId, setVcId] = useState(null);
+  const storedCaptain = sessionStorage.getItem('existingCaptainId');
+  const storedVc = sessionStorage.getItem('existingVcId');
+
+  // Pre-select captain/VC if they're in the current player list
+  const playerIds = new Set(players.map(p => p.player_id));
+  const initialCaptain = storedCaptain && playerIds.has(storedCaptain) ? storedCaptain : null;
+  const initialVc = storedVc && playerIds.has(storedVc) ? storedVc : null;
+
+  const [captainId, setCaptainId] = useState(initialCaptain);
+  const [vcId, setVcId] = useState(initialVc);
   const [saving, setSaving] = useState(false);
 
   const handleCaptain = (playerId) => {
@@ -72,6 +80,8 @@ export default function CaptainSelect() {
 
           await supabase.from('team_players').insert(teamPlayers);
           sessionStorage.removeItem('selectedPlayers');
+          sessionStorage.removeItem('existingCaptainId');
+          sessionStorage.removeItem('existingVcId');
           navigate(`/team-preview/${existing.id}`);
           return;
         }

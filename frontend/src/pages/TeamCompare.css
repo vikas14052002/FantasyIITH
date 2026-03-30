@@ -18,7 +18,7 @@
   flex-shrink: 0;
 }
 
-/* Score strip */
+/* ── Score Strip ── */
 .cmp-score-strip {
   display: flex;
   align-items: center;
@@ -33,9 +33,7 @@
   flex: 1;
 }
 
-.cmp-score-right {
-  justify-content: flex-end;
-}
+.cmp-score-right { justify-content: flex-end; }
 
 .cmp-score-name {
   font-size: 11px;
@@ -44,14 +42,8 @@
   color: var(--text-secondary);
 }
 
-.cmp-score-pts {
-  font-size: 24px;
-  font-weight: 700;
-}
-
-.cmp-winner .cmp-score-pts {
-  color: var(--green);
-}
+.cmp-score-pts { font-size: 24px; font-weight: 700; }
+.cmp-winner .cmp-score-pts { color: var(--green); }
 
 .cmp-score-center {
   text-align: center;
@@ -59,191 +51,157 @@
   flex-shrink: 0;
 }
 
-.cmp-score-diff {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--coral);
-}
+.cmp-total-diff { font-size: 16px; font-weight: 700; color: var(--text-muted); }
+.cmp-total-diff.pos { color: var(--green); }
+.cmp-total-diff.neg { color: var(--coral); }
+.cmp-score-diff-label { font-size: 8px; color: var(--text-muted); }
 
-.cmp-score-diff-label {
-  font-size: 8px;
-  color: var(--text-muted);
-}
-
-/* Section headers */
-.cmp-section-header {
+/* ── Category Header ── */
+.cmp-cat-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px;
+  padding: 10px 14px;
   background: var(--bg-elevated);
-  border-radius: 8px;
-  margin-bottom: 8px;
+  border-radius: 8px 8px 0 0;
+  margin-top: 12px;
+}
+
+.cmp-cat-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-size: 12px;
   font-weight: 700;
   color: var(--text-secondary);
 }
 
-.cmp-section-count {
+.cmp-cat-count {
   background: var(--bg-modal);
-  padding: 2px 10px;
+  padding: 1px 8px;
   border-radius: 10px;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-primary);
 }
 
-/* Different players: 2 columns */
-.cmp-diff-grid {
-  display: flex;
-  margin-bottom: 16px;
-}
-
-.cmp-diff-col {
-  flex: 1;
-}
-
-.cmp-diff-divider {
-  width: 1px;
-  background: var(--border);
-  margin: 0 2px;
-}
-
-.cmp-empty-col {
-  text-align: center;
-  padding: 16px;
-  color: var(--text-muted);
-  font-size: 12px;
-}
-
-/* Player card in diff section */
-.cmp-pcard {
+.cmp-cat-summary {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
-  border-bottom: 1px solid var(--border);
+  gap: 6px;
 }
 
-.cmp-pcard.right {
-  flex-direction: row-reverse;
-  text-align: right;
-}
+.cmp-cat-pts { font-size: 13px; font-weight: 700; min-width: 20px; text-align: center; }
 
-.cmp-pcard-img {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  object-fit: cover;
-  flex-shrink: 0;
-  border: 2px solid var(--border);
-}
-
-.cmp-pcard-fb {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: var(--bg-elevated);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
+.cmp-cat-diff {
+  font-size: 10px;
   font-weight: 700;
-  flex-shrink: 0;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: var(--bg-modal);
+  color: var(--text-muted);
 }
 
-.cmp-pcard-info {
+.cmp-cat-diff.pos { color: var(--green); background: rgba(76, 175, 80, 0.12); }
+.cmp-cat-diff.neg { color: var(--coral); background: rgba(236, 116, 100, 0.12); }
+
+.cmp-cat-body {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  padding: 0;
+  margin-bottom: 4px;
+}
+
+/* ══════════════════════════════════════
+   All compare rows use 5-col grid:
+   [pts1] [left-chip] [vs] [right-chip] [pts2]
+   ══════════════════════════════════════ */
+
+.cmp-diff-row,
+.cmp-cv-row,
+.cmp-common-row {
+  display: grid;
+  grid-template-columns: 36px 1fr 20px 1fr 36px;
+  align-items: center;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  gap: 0;
+}
+
+.cmp-diff-row:last-child,
+.cmp-cv-row:last-child,
+.cmp-common-row:last-child { border-bottom: none; }
+
+/* Points — always at edges, fixed width */
+.cmp-diff-pts,
+.cmp-cv-pts,
+.cmp-pts {
+  font-size: 15px;
+  font-weight: 700;
+  text-align: center;
+}
+
+/* VS divider — center column */
+.cmp-diff-vs,
+.cmp-cv-vs,
+.cmp-common-vs {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+/* Left chip wrapper */
+.cmp-diff-side,
+.cmp-cv-side {
+  display: flex;
+  align-items: center;
   min-width: 0;
 }
 
-.cmp-pcard-name {
-  font-size: 12px;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.cmp-pcard.right .cmp-pcard-name {
+.cmp-diff-side.left,
+.cmp-cv-side.left {
   justify-content: flex-end;
 }
 
-.cmp-pcard-meta {
-  font-size: 10px;
-  color: var(--text-secondary);
+.cmp-diff-side.left .cmp-chip,
+.cmp-cv-side.left .cmp-chip {
+  flex-direction: row-reverse;
 }
 
-/* Badges */
-.cmp-badge-c {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  font-size: 8px;
-  font-weight: 800;
-  background: var(--gold);
-  color: #000;
-  flex-shrink: 0;
+.cmp-diff-side.left .cmp-chip-info,
+.cmp-cv-side.left .cmp-chip-info {
+  text-align: right;
+  align-items: flex-end;
 }
 
-.cmp-badge-vc {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  font-size: 7px;
-  font-weight: 800;
-  background: var(--blue);
-  color: #fff;
-  flex-shrink: 0;
-}
-
-/* Common players */
-.cmp-common-list {
-  margin-bottom: 16px;
-}
-
-.cmp-common-row {
-  display: flex;
-  align-items: center;
-  padding: 10px 6px;
-  border-bottom: 1px solid var(--border);
-}
-
-.cmp-common-side {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  width: 56px;
-  justify-content: flex-end;
-}
-
-.cmp-common-side-r {
+.cmp-diff-side.right,
+.cmp-cv-side.right {
   justify-content: flex-start;
 }
 
+.cmp-diff-empty { flex: 1; }
+.cmp-cv-empty { font-size: 11px; color: var(--text-muted); font-style: italic; }
+
 .cmp-common-mid {
-  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: 3px;
 }
 
 .cmp-common-img {
-  width: 36px;
-  height: 36px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   object-fit: cover;
   border: 2px solid var(--teal);
 }
 
 .cmp-common-fb {
-  width: 36px;
-  height: 36px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   background: var(--bg-elevated);
   display: flex;
@@ -256,14 +214,120 @@
 .cmp-common-name {
   font-size: 11px;
   font-weight: 600;
+  max-width: 100px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
 }
 
-.cmp-common-role {
-  font-size: 9px;
-  color: var(--text-secondary);
+.cmp-common-side-left {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 50px;
+  justify-content: flex-end;
 }
 
-.cmp-pts {
-  font-size: 14px;
+.cmp-common-side-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 50px;
+  justify-content: flex-start;
+}
+
+/* ── Player Chip ── */
+.cmp-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.cmp-chip-img {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1.5px solid var(--border);
+}
+
+.cmp-chip-fb {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--bg-elevated);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
   font-weight: 700;
+  flex-shrink: 0;
+  color: var(--text-primary);
+}
+
+.cmp-chip-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.cmp-chip-name {
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 90px;
+}
+
+.cmp-chip-role {
+  font-size: 9px;
+  color: var(--text-muted);
+}
+
+.cmp-chip-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  font-size: 8px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+/* ── Badges ── */
+.cmp-badge-c {
+  background: var(--gold);
+  color: #000;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  font-size: 8px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.cmp-badge-vc {
+  background: var(--blue);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  font-size: 7px;
+  font-weight: 800;
+  flex-shrink: 0;
 }

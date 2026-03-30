@@ -9,7 +9,7 @@ export default function Home() {
   const [matches, setMatches] = useState([]);
   const [leagues, setLeagues] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('upcoming');
+  const [activeTab, setActiveTab] = useState('live');
   const navigate = useNavigate();
   const user = getUser();
 

@@ -42,6 +42,13 @@
   object-fit: contain;
 }
 
+.team-score {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-top: -2px;
+}
+
 .team-badge {
   width: 48px;
   height: 48px;

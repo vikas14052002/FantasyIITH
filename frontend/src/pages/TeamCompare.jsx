@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import { getUser } from '../lib/auth';
+import { hasMatchStarted } from '../lib/matchLock';
 import './TeamCompare.css';
 
 export default function TeamCompare() {
@@ -19,7 +21,7 @@ export default function TeamCompare() {
   async function loadData() {
     const [membersRes, matchesRes] = await Promise.all([
       supabase.from('league_members').select('user_id, users(*)').eq('league_id', leagueId),
-      supabase.from('matches').select('*').order('match_number'),
+      supabase.from('matches').select('*').order('match_number', { ascending: false }),
     ]);
     setMembers((membersRes.data || []).map(m => m.users));
     setMatches(matchesRes.data || []);
@@ -28,43 +30,87 @@ export default function TeamCompare() {
 
   async function compare() {
     if (!user1 || !user2 || !selectedMatch) return;
+
+    // Check if match has started — can only compare after deadline
+    const selectedMatchData = matches.find(m => m.id === selectedMatch);
+    if (selectedMatchData && !hasMatchStarted(selectedMatchData)) {
+      setComparison({ error: true, locked: true });
+      return;
+    }
+
     setComparing(true);
 
-    const [team1Res, team2Res, mpRes] = await Promise.all([
-      supabase.from('teams').select('*, team_players(*)').eq('user_id', user1).eq('match_id', selectedMatch).eq('league_id', leagueId).single(),
-      supabase.from('teams').select('*, team_players(*)').eq('user_id', user2).eq('match_id', selectedMatch).eq('league_id', leagueId).single(),
-      supabase.from('match_players').select('player_id, name, image_url, fantasy_points, role, team').eq('match_id', selectedMatch),
+    const me = getUser();
+
+    // Get both teams metadata
+    const [team1Res, team2Res] = await Promise.all([
+      supabase.from('teams').select('*').eq('user_id', user1).eq('match_id', selectedMatch).eq('league_id', leagueId).single(),
+      supabase.from('teams').select('*').eq('user_id', user2).eq('match_id', selectedMatch).eq('league_id', leagueId).single(),
     ]);
 
-    const mp = mpRes.data || [];
     const t1 = team1Res.data;
     const t2 = team2Res.data;
 
     if (!t1 || !t2) { setComparison({ error: true }); setComparing(false); return; }
 
-    function enrich(tp) {
-      const m = mp.find(x => x.player_id === tp.player_id);
-      const base = m?.fantasy_points || 0;
-      const mult = tp.is_captain ? 2 : tp.is_vice_captain ? 1.5 : 1;
-      return { ...tp, image_url: m?.image_url, base_points: base, multiplier: mult, total_points: base * mult };
+    // Use secure function to get players (returns empty if match not started for other users)
+    const [t1PlayersRes, t2PlayersRes] = await Promise.all([
+      supabase.rpc('get_team_preview', { p_team_id: t1.id, p_requesting_user_id: me?.id }),
+      supabase.rpc('get_team_preview', { p_team_id: t2.id, p_requesting_user_id: me?.id }),
+    ]);
+
+    const t1Raw = t1PlayersRes.data || [];
+    const t2Raw = t2PlayersRes.data || [];
+
+    if (t1Raw.length === 0 || t2Raw.length === 0) {
+      setComparison({ error: true, locked: true });
+      setComparing(false);
+      return;
     }
 
-    const t1Players = t1.team_players.map(enrich);
-    const t2Players = t2.team_players.map(enrich);
-    const t1Ids = new Set(t1Players.map(p => p.player_id));
-    const t2Ids = new Set(t2Players.map(p => p.player_id));
+    function enrich(tp) {
+      const base = tp.fantasy_points || 0;
+      const mult = tp.is_captain ? 2 : tp.is_vice_captain ? 1.5 : 1;
+      return { ...tp, base_points: base, multiplier: mult, total_points: base * mult };
+    }
+
+    const t1Players = t1Raw.map(enrich);
+    const t2Players = t2Raw.map(enrich);
+    const t1Map = new Map(t1Players.map(p => [p.player_id, p]));
+    const t2Map = new Map(t2Players.map(p => [p.player_id, p]));
+
+    const captain1 = t1Players.find(p => p.is_captain);
+    const captain2 = t2Players.find(p => p.is_captain);
+    const vc1 = t1Players.find(p => p.is_vice_captain);
+    const vc2 = t2Players.find(p => p.is_vice_captain);
+
+    // C/VC players go in the C&VC section ONLY if both users have that player
+    // If only one user has them, they go in Different Players with the C/VC label
+    const cvSharedIds = new Set();
+    [captain1, captain2, vc1, vc2].forEach(p => {
+      if (p && t1Map.has(p.player_id) && t2Map.has(p.player_id)) {
+        cvSharedIds.add(p.player_id);
+      }
+    });
+
+    // Different players: only in one team (include C/VC if not shared)
+    const onlyT1 = t1Players.filter(p => !t2Map.has(p.player_id));
+    const onlyT2 = t2Players.filter(p => !t1Map.has(p.player_id));
+
+    // Common players: in both teams but NOT in the C&VC shared section
+    const common = t1Players
+      .filter(p => t2Map.has(p.player_id) && !cvSharedIds.has(p.player_id))
+      .map(p1 => ({ t1: p1, t2: t2Map.get(p1.player_id) }));
 
     setComparison({
       error: false,
       user1: members.find(m => m.id === user1),
       user2: members.find(m => m.id === user2),
       team1: t1, team2: t2,
-      onlyT1: t1Players.filter(p => !t2Ids.has(p.player_id)),
-      onlyT2: t2Players.filter(p => !t1Ids.has(p.player_id)),
-      common: t1Players.filter(p => t2Ids.has(p.player_id)).map(p1 => ({
-        t1: p1,
-        t2: t2Players.find(p2 => p2.player_id === p1.player_id),
-      })),
+      t1Map, t2Map,
+      captain1, captain2, vc1, vc2,
+      cvSharedIds,
+      common, onlyT1, onlyT2,
     });
     setComparing(false);
   }
@@ -99,109 +145,224 @@ export default function TeamCompare() {
 
       {comparison?.error && (
         <div className="empty">
-          <div className="empty-icon">👥</div>
-          <p className="empty-text">One or both users haven't created a team for this match</p>
+          <div className="empty-icon">{comparison.locked ? '🔒' : '👥'}</div>
+          <p className="empty-text">
+            {comparison.locked
+              ? 'Teams can only be compared after the match starts'
+              : "One or both users haven't created a team for this match"}
+          </p>
         </div>
       )}
 
-      {comparison && !comparison.error && (
-        <div className="cmp-result fade-in">
+      {comparison && !comparison.error && (() => {
+        const c = comparison;
+        const t1Total = c.team1.total_points || 0;
+        const t2Total = c.team2.total_points || 0;
+        const diff = t1Total - t2Total;
 
-          {/* Score strip */}
-          <div className="cmp-score-strip card">
-            <div className={`cmp-score-side ${comparison.team1.total_points >= comparison.team2.total_points ? 'cmp-winner' : ''}`}>
-              <div className="avatar" style={{ background: comparison.user1.avatar_color, width: 36, height: 36, fontSize: 14 }}>
-                {comparison.user1.name[0].toUpperCase()}
-              </div>
-              <div>
-                <div className="cmp-score-name">{comparison.user1.name}</div>
-                <div className="cmp-score-pts">{comparison.team1.total_points}</div>
-              </div>
-            </div>
-            <div className="cmp-score-center">
-              <div className="cmp-score-diff">{Math.abs(comparison.team1.total_points - comparison.team2.total_points)}</div>
-              <div className="cmp-score-diff-label">DIFF</div>
-            </div>
-            <div className={`cmp-score-side cmp-score-right ${comparison.team2.total_points >= comparison.team1.total_points ? 'cmp-winner' : ''}`}>
-              <div style={{ textAlign: 'right' }}>
-                <div className="cmp-score-name">{comparison.user2.name}</div>
-                <div className="cmp-score-pts">{comparison.team2.total_points}</div>
-              </div>
-              <div className="avatar" style={{ background: comparison.user2.avatar_color, width: 36, height: 36, fontSize: 14 }}>
-                {comparison.user2.name[0].toUpperCase()}
-              </div>
-            </div>
-          </div>
+        return (
+          <div className="cmp-result fade-in">
 
-          {/* Different players */}
-          <div className="cmp-section-header">
-            <span>Different Players</span>
-            <span className="cmp-section-count">{comparison.onlyT1.length + comparison.onlyT2.length}</span>
-          </div>
-          <div className="cmp-diff-grid">
-            <div className="cmp-diff-col">
-              {comparison.onlyT1.map(p => <PCard key={p.player_id} p={p} align="left" />)}
-              {comparison.onlyT1.length === 0 && <div className="cmp-empty-col">—</div>}
-            </div>
-            <div className="cmp-diff-divider" />
-            <div className="cmp-diff-col">
-              {comparison.onlyT2.map(p => <PCard key={p.player_id} p={p} align="right" />)}
-              {comparison.onlyT2.length === 0 && <div className="cmp-empty-col">—</div>}
-            </div>
-          </div>
-
-          {/* Common players */}
-          <div className="cmp-section-header">
-            <span>Common Players</span>
-            <span className="cmp-section-count">{comparison.common.length}</span>
-          </div>
-          <div className="cmp-common-list">
-            {comparison.common.map(({ t1, t2 }) => (
-              <div key={t1.player_id} className="cmp-common-row">
-                <div className="cmp-common-side">
-                  <span className="cmp-pts">{t1.total_points}</span>
-                  {t1.is_captain && <span className="cmp-badge-c">C</span>}
-                  {t1.is_vice_captain && <span className="cmp-badge-vc">VC</span>}
+            {/* Score strip */}
+            <div className="cmp-score-strip card">
+              <div className={`cmp-score-side ${t1Total >= t2Total ? 'cmp-winner' : ''}`}>
+                <div className="avatar" style={{ background: c.user1.avatar_color, width: 36, height: 36, fontSize: 14 }}>
+                  {c.user1.name[0].toUpperCase()}
                 </div>
-                <div className="cmp-common-mid">
-                  {t1.image_url ? (
-                    <img className="cmp-common-img" src={t1.image_url} alt={t1.name} />
-                  ) : (
-                    <div className="cmp-common-fb">{t1.name.split(' ').map(n => n[0]).join('').slice(0, 2)}</div>
-                  )}
-                  <div className="cmp-common-name">{t1.name.split(' ').pop()}</div>
-                  <div className="cmp-common-role">{t1.role}</div>
-                </div>
-                <div className="cmp-common-side cmp-common-side-r">
-                  {t2.is_captain && <span className="cmp-badge-c">C</span>}
-                  {t2.is_vice_captain && <span className="cmp-badge-vc">VC</span>}
-                  <span className="cmp-pts">{t2.total_points}</span>
+                <div>
+                  <div className="cmp-score-name">{c.user1.name}</div>
+                  <div className="cmp-score-pts">{t1Total}</div>
                 </div>
               </div>
-            ))}
-          </div>
+              <div className="cmp-score-center">
+                <div className={`cmp-total-diff ${diff > 0 ? 'pos' : diff < 0 ? 'neg' : ''}`}>
+                  {diff > 0 ? '+' : ''}{diff}
+                </div>
+                <div className="cmp-score-diff-label">DIFF</div>
+              </div>
+              <div className={`cmp-score-side cmp-score-right ${t2Total >= t1Total ? 'cmp-winner' : ''}`}>
+                <div style={{ textAlign: 'right' }}>
+                  <div className="cmp-score-name">{c.user2.name}</div>
+                  <div className="cmp-score-pts">{t2Total}</div>
+                </div>
+                <div className="avatar" style={{ background: c.user2.avatar_color, width: 36, height: 36, fontSize: 14 }}>
+                  {c.user2.name[0].toUpperCase()}
+                </div>
+              </div>
+            </div>
 
-        </div>
-      )}
+            {/* 1. Different Players */}
+            {(c.onlyT1.length > 0 || c.onlyT2.length > 0) && (
+              <CategoryHeader title="Different Players" count={c.onlyT1.length + c.onlyT2.length}
+                pts1={c.onlyT1.reduce((s, p) => s + p.total_points, 0)}
+                pts2={c.onlyT2.reduce((s, p) => s + p.total_points, 0)} />
+            )}
+            {(c.onlyT1.length > 0 || c.onlyT2.length > 0) && (
+              <div className="cmp-cat-body">
+                {Array.from({ length: Math.max(c.onlyT1.length, c.onlyT2.length) }).map((_, i) => (
+                  <DiffRow key={i} p1={c.onlyT1[i]} p2={c.onlyT2[i]} />
+                ))}
+              </div>
+            )}
+
+            {/* 2. Captain & Vice Captain (only shared players) */}
+            {c.cvSharedIds.size > 0 && (
+              <>
+            <CategoryHeader title="Captain & Vice Captain"
+              pts1={[c.captain1, c.vc1].filter(p => p && c.cvSharedIds.has(p.player_id)).reduce((s, p) => s + p.total_points, 0)}
+              pts2={[c.captain2, c.vc2].filter(p => p && c.cvSharedIds.has(p.player_id)).reduce((s, p) => s + p.total_points, 0)} />
+            <div className="cmp-cat-body">
+              {/* User1's captain — if both users have this player */}
+              {c.captain1 && c.cvSharedIds.has(c.captain1.player_id) && (
+                <CVRow
+                  p1={c.captain1} label1="C"
+                  p2Right={c.t2Map.get(c.captain1.player_id)}
+                  isUser1Row
+                />
+              )}
+              {/* User2's captain — if different from user1's and both have this player */}
+              {c.captain2 && c.captain2.player_id !== c.captain1?.player_id && c.cvSharedIds.has(c.captain2.player_id) && (
+                <CVRow
+                  p2={c.captain2} label2="C"
+                  p1Left={c.t1Map.get(c.captain2.player_id)}
+                />
+              )}
+              {/* User1's VC — if both users have this player */}
+              {c.vc1 && c.cvSharedIds.has(c.vc1.player_id) && (
+                <CVRow
+                  p1={c.vc1} label1="VC"
+                  p2Right={c.t2Map.get(c.vc1.player_id)}
+                  isUser1Row
+                />
+              )}
+              {/* User2's VC — if different from user1's and both have this player */}
+              {c.vc2 && c.vc2.player_id !== c.vc1?.player_id && c.cvSharedIds.has(c.vc2.player_id) && (
+                <CVRow
+                  p2={c.vc2} label2="VC"
+                  p1Left={c.t1Map.get(c.vc2.player_id)}
+                />
+              )}
+            </div>
+              </>
+            )}
+
+            {/* 3. Common Players */}
+            {c.common.length > 0 && (
+              <>
+                <CategoryHeader title="Common Players" count={c.common.length}
+                  pts1={c.common.reduce((s, x) => s + x.t1.total_points, 0)}
+                  pts2={c.common.reduce((s, x) => s + x.t2.total_points, 0)} />
+                <div className="cmp-cat-body">
+                  {c.common.map(({ t1, t2 }) => (
+                    <div key={t1.player_id} className="cmp-common-row">
+                      <span className="cmp-pts">{t1.total_points}</span>
+                      <div className="cmp-diff-side left"><PlayerChip p={t1} label={getLabel(t1)} /></div>
+                      <div className="cmp-diff-vs"></div>
+                      <div className="cmp-diff-side right"><PlayerChip p={t2} label={getLabel(t2)} /></div>
+                      <span className="cmp-pts">{t2.total_points}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+
+          </div>
+        );
+      })()}
     </div>
   );
 }
 
-function PCard({ p, align }) {
+function CategoryHeader({ title, badge, badgeClass, count, pts1, pts2 }) {
+  const diff = pts1 - pts2;
   return (
-    <div className={`cmp-pcard ${align}`}>
-      {p.image_url ? (
-        <img className="cmp-pcard-img" src={p.image_url} alt={p.name} />
-      ) : (
-        <div className="cmp-pcard-fb">{p.name.split(' ').map(n => n[0]).join('').slice(0, 2)}</div>
-      )}
-      <div className="cmp-pcard-info">
-        <div className="cmp-pcard-name">
-          {p.name.split(' ').pop()}
-          {p.is_captain && <span className="cmp-badge-c">C</span>}
-          {p.is_vice_captain && <span className="cmp-badge-vc">VC</span>}
+    <div className="cmp-cat-header">
+      <div className="cmp-cat-title">
+        {badge && <span className={badgeClass}>{badge}</span>}
+        <span>{title}</span>
+        {count != null && <span className="cmp-cat-count">{count}</span>}
+      </div>
+      <div className="cmp-cat-summary">
+        <span className="cmp-cat-pts">{pts1}</span>
+        <span className={`cmp-cat-diff ${diff > 0 ? 'pos' : diff < 0 ? 'neg' : ''}`}>
+          {diff > 0 ? '+' : ''}{diff}
+        </span>
+        <span className="cmp-cat-pts">{pts2}</span>
+      </div>
+    </div>
+  );
+}
+
+function CVRow({ p1, label1, p2, label2, p2Right, p1Left, isUser1Row }) {
+  if (isUser1Row && p1) {
+    return (
+      <div className="cmp-cv-row">
+        <span className="cmp-cv-pts">{p1.total_points}</span>
+        <div className="cmp-cv-side left"><PlayerChip p={p1} label={label1} /></div>
+        <div className="cmp-cv-vs">vs</div>
+        <div className="cmp-cv-side right">
+          {p2Right ? <PlayerChip p={p2Right} label={p2Right.is_captain ? 'C' : p2Right.is_vice_captain ? 'VC' : null} /> : <span className="cmp-cv-empty">—</span>}
         </div>
-        <div className="cmp-pcard-meta">{p.role} • {p.total_points} pts</div>
+        <span className="cmp-cv-pts">{p2Right ? p2Right.total_points : ''}</span>
+      </div>
+    );
+  }
+
+  if (p2) {
+    return (
+      <div className="cmp-cv-row">
+        <span className="cmp-cv-pts">{p1Left ? p1Left.total_points : ''}</span>
+        <div className="cmp-cv-side left">
+          {p1Left ? <PlayerChip p={p1Left} label={p1Left.is_captain ? 'C' : p1Left.is_vice_captain ? 'VC' : null} /> : <span className="cmp-cv-empty">—</span>}
+        </div>
+        <div className="cmp-cv-vs">vs</div>
+        <div className="cmp-cv-side right"><PlayerChip p={p2} label={label2} /></div>
+        <span className="cmp-cv-pts">{p2.total_points}</span>
+      </div>
+    );
+  }
+
+  return null;
+}
+
+function getLabel(p) {
+  if (!p) return null;
+  if (p.is_captain) return 'C';
+  if (p.is_vice_captain) return 'VC';
+  return null;
+}
+
+function DiffRow({ p1, p2 }) {
+  return (
+    <div className="cmp-diff-row">
+      <span className="cmp-diff-pts">{p1 ? p1.total_points : ''}</span>
+      <div className="cmp-diff-side left">
+        {p1 ? <PlayerChip p={p1} label={getLabel(p1)} /> : null}
+      </div>
+      <div className="cmp-diff-vs">vs</div>
+      <div className="cmp-diff-side right">
+        {p2 ? <PlayerChip p={p2} label={getLabel(p2)} /> : null}
+      </div>
+      <span className="cmp-diff-pts">{p2 ? p2.total_points : ''}</span>
+    </div>
+  );
+}
+
+function PlayerChip({ p, label }) {
+  if (!p) return null;
+  return (
+    <div className="cmp-chip">
+      {p.image_url ? (
+        <img className="cmp-chip-img" src={p.image_url} alt={p.name} />
+      ) : (
+        <div className="cmp-chip-fb">{p.name.split(' ').map(n => n[0]).join('').slice(0, 2)}</div>
+      )}
+      <div className="cmp-chip-info">
+        <div className="cmp-chip-name">
+          {p.name.split(' ').pop()}
+          {label && <span className={`cmp-chip-label ${label === 'C' ? 'cmp-badge-c' : label === 'VC' ? 'cmp-badge-vc' : ''}`}>{label}</span>}
+        </div>
+        <div className="cmp-chip-role">{p.role}</div>
       </div>
     </div>
   );

@@ -1,0 +1,352 @@
+/* ── Leaderboard ── */
+.md-lb {
+  display: flex;
+  flex-direction: column;
+}
+
+.md-lb-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 8px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--border);
+}
+
+.md-lb-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--border);
+  border-radius: 8px;
+  transition: background 0.15s;
+}
+
+.md-lb-row.md-lb-me {
+  background: rgba(209, 30, 54, 0.06);
+}
+
+.md-lb-row.md-lb-clickable {
+  cursor: pointer;
+}
+
+.md-lb-row.md-lb-clickable:active {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.md-lb-pts {
+  font-size: 16px;
+  font-weight: 700;
+  min-width: 40px;
+  text-align: right;
+}
+
+.md-you-tag {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--red-primary);
+  background: rgba(209, 30, 54, 0.15);
+  padding: 1px 6px;
+  border-radius: 8px;
+  margin-left: 4px;
+  text-transform: uppercase;
+}
+
+.md-lb-lock-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+/* ── Player Stats ── */
+.md-stats-header {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--border);
+}
+
+.md-player-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.md-player-left {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.md-player-img {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--border);
+}
+
+.md-player-avatar {
+  width: 38px;
+  height: 38px;
+  font-size: 11px;
+}
+
+.md-dream-border {
+  border-color: var(--gold) !important;
+  box-shadow: 0 0 6px rgba(255, 193, 7, 0.3);
+}
+
+.md-dream-badge {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--bg-surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--gold);
+}
+
+.md-dream-tag {
+  font-size: 8px;
+  font-weight: 700;
+  color: var(--gold);
+  background: rgba(255, 193, 7, 0.12);
+  padding: 1px 5px;
+  border-radius: 6px;
+  margin-left: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.md-player-pts {
+  font-size: 16px;
+  font-weight: 700;
+  min-width: 40px;
+  text-align: right;
+  color: var(--text-primary);
+}
+
+.md-player-pts.high {
+  color: var(--green);
+}
+
+.md-player-pts.neg {
+  color: var(--coral);
+}
+
+.md-dream-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: rgba(255, 193, 7, 0.08);
+  border: 1px solid rgba(255, 193, 7, 0.2);
+  border-radius: 8px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+}
+
+.md-bench-divider {
+  display: flex;
+  align-items: center;
+  padding: 14px 0 8px;
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+/* ── Compare Section ── */
+.md-cmp {}
+
+.md-cmp-selectors {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.md-cmp-select {
+  flex: 1;
+  min-height: 40px;
+  font-size: 12px;
+  padding: 8px 28px 8px 10px;
+}
+
+.md-cmp-vs {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.md-cmp-btn {
+  min-height: 40px;
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+.md-cmp-error {
+  text-align: center;
+  font-size: 12px;
+  color: var(--coral);
+  padding: 12px;
+}
+
+/* Compare result */
+.md-cmp-result {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.md-cmp-score {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  background: var(--bg-elevated);
+}
+
+.md-cmp-score-side {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.md-cmp-score-side.right {
+  flex-direction: row-reverse;
+}
+
+.md-cmp-score-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: capitalize;
+}
+
+.md-cmp-score-pts {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.md-cmp-score-side.win .md-cmp-score-pts {
+  color: var(--green);
+}
+
+.md-cmp-score-diff {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  padding: 2px 8px;
+  background: var(--bg-modal);
+  border-radius: 6px;
+}
+
+/* Sections */
+.md-cmp-section {
+  padding: 0 14px;
+}
+
+.md-cmp-section-title {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 10px 0 4px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Common row */
+.md-cmp-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.md-cmp-row:last-child { border-bottom: none; }
+
+.md-cmp-row-pts {
+  font-size: 14px;
+  font-weight: 700;
+  min-width: 28px;
+  text-align: center;
+}
+
+.md-cmp-row-center {
+  flex: 1;
+  text-align: center;
+}
+
+.md-cmp-row-name {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.md-cmp-row-role {
+  font-size: 9px;
+  color: var(--text-muted);
+  margin-left: 4px;
+}
+
+/* Different row */
+.md-cmp-diff-row {
+  display: flex;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.md-cmp-diff-row:last-child { border-bottom: none; }
+
+.md-cmp-diff-side {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.md-cmp-diff-side.left { justify-content: flex-start; }
+.md-cmp-diff-side.right { justify-content: flex-end; }
+
+.md-cmp-diff-name {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.md-cmp-diff-vs {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-muted);
+  width: 24px;
+  text-align: center;
+  flex-shrink: 0;
+}

@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { getUser } from '../lib/auth';
+import { hasMatchStarted } from '../lib/matchLock';
 import MatchCard from '../components/MatchCard';
 import './LeagueDetail.css';
 
@@ -88,9 +89,11 @@ export default function LeagueDetail() {
   };
 
   function handleMemberClick(member) {
-    if (member.team) {
-      navigate(`/team-preview/${member.team.id}`);
-    }
+    if (!member.team) return;
+    const isMe = member.id === user?.id;
+    // Can only view others' teams after match starts
+    if (!isMe && selectedMatch && !hasMatchStarted(selectedMatch)) return;
+    navigate(`/team-preview/${member.team.id}`);
   }
 
   if (loading) return <div className="loader"><div className="spinner" /></div>;

@@ -272,6 +272,27 @@
   color: #fff;
 }
 
+.preview-badge-dream {
+  background: var(--bg-surface);
+  border-color: var(--gold);
+  bottom: auto;
+  top: -2px;
+  left: -4px;
+  right: auto;
+  width: 16px;
+  height: 16px;
+}
+
+.preview-dream-glow {
+  border-color: var(--gold) !important;
+  box-shadow: 0 0 8px rgba(255, 193, 7, 0.4);
+}
+
+.pill-dream {
+  background: var(--gold);
+  color: #000;
+}
+
 /* Name pill */
 .preview-name-pill {
   font-size: 8px;
