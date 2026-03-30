@@ -131,4 +131,4 @@ Key security: `get_team_preview()` PostgreSQL function ensures team data is only
 
 ---
 
-Built at IIT Hyderabad for IPL 2026. Started as a weekend project, grew into a full fantasy platform.
+Built for IPL 2026. Started as a weekend project, grew into a full fantasy platform.
