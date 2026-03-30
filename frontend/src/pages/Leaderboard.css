@@ -144,3 +144,84 @@ select.input option {
   color: var(--text-muted);
   flex-shrink: 0;
 }
+
+/* ── Compare Mode ── */
+.lb-compare-toggle-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.lb-compare-mode-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--red-primary);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.lb-compare-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+
+.lb-compare-btn:active { transform: scale(0.92); }
+
+.lb-compare-btn.active {
+  background: var(--red-primary);
+  border-color: var(--red-primary);
+  color: #fff;
+}
+
+.lb-compare-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.lb-compare-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 0 0 10px;
+}
+
+.lb-compare-users {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.lb-compare-user-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--bg-elevated);
+  border-radius: var(--radius);
+  border: 1.5px solid var(--border);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.lb-compare-user-row:active { background: var(--bg-surface); }
+
+.lb-compare-user-row.active {
+  border-color: var(--red-primary);
+  background: rgba(217, 30, 54, 0.06);
+}
+
+.lb-compare-user-name {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 600;
+}
