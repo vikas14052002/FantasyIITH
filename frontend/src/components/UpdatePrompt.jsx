@@ -1,64 +1,42 @@
-import { useEffect } from 'react';
-
-const CHECK_INTERVAL = 120000; // check every 2 min
+import { useEffect, useRef } from 'react';
+import { supabase } from '../lib/supabase';
 
 export default function UpdatePrompt() {
-  useEffect(() => {
-    const currentHash = getCurrentBuildHash();
-    if (!currentHash) return;
+  const initialVersion = useRef(null);
 
-    const interval = setInterval(async () => {
-      try {
-        const res = await fetch('/?_check=' + Date.now(), {
-          cache: 'no-store',
-          headers: { 'Accept': 'text/html' },
-        });
-        const html = await res.text();
-        const freshHash = getBuildHashFromHTML(html);
-        if (freshHash && freshHash !== currentHash) {
-          clearInterval(interval);
-          // Silent reload — only if user is not actively interacting
-          // (no form focus, no modal open, no scrolling)
+  useEffect(() => {
+    // Get current version on mount
+    supabase.from('app_config').select('value').eq('key', 'build_version').single()
+      .then(({ data }) => {
+        if (data) initialVersion.current = data.value;
+      });
+
+    // Listen for changes via Realtime
+    const channel = supabase
+      .channel('app-updates')
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'app_config',
+        filter: 'key=eq.build_version',
+      }, (payload) => {
+        const newVersion = payload.new?.value;
+        if (initialVersion.current && newVersion && newVersion !== initialVersion.current) {
+          // Silent reload
           if (!document.querySelector('input:focus, select:focus, textarea:focus')) {
             window.location.reload();
           } else {
-            // If user is busy, wait and reload when they blur
-            const onBlur = () => {
-              window.removeEventListener('blur', onBlur);
-              document.removeEventListener('visibilitychange', onVisChange);
-              window.location.reload();
-            };
-            const onVisChange = () => {
-              if (document.visibilityState === 'visible') {
-                document.removeEventListener('visibilitychange', onVisChange);
-                window.removeEventListener('blur', onBlur);
-                window.location.reload();
-              }
-            };
-            // Reload when user switches back to tab or blurs input
-            window.addEventListener('blur', onBlur);
-            document.addEventListener('visibilitychange', onVisChange);
+            const reload = () => window.location.reload();
+            document.addEventListener('visibilitychange', () => {
+              if (document.visibilityState === 'visible') reload();
+            }, { once: true });
           }
         }
-      } catch { /* ignore */ }
-    }, CHECK_INTERVAL);
+      })
+      .subscribe();
 
-    return () => clearInterval(interval);
+    return () => { supabase.removeChannel(channel); };
   }, []);
 
-  return null; // No visible UI
-}
-
-function getCurrentBuildHash() {
-  const scripts = Array.from(document.querySelectorAll('script[src]'));
-  for (const s of scripts) {
-    const match = s.src.match(/\/assets\/index-([a-zA-Z0-9_-]+)\.js/);
-    if (match) return match[1];
-  }
   return null;
-}
-
-function getBuildHashFromHTML(html) {
-  const match = html.match(/\/assets\/index-([a-zA-Z0-9_-]+)\.js/);
-  return match ? match[1] : null;
 }
