@@ -137,10 +137,29 @@ export default function MatchDetail() {
     if (t1Players.length === 0 || t2Players.length === 0) { setComparison({ error: true }); setComparing(false); return; }
     const t1Map = new Map(t1Players.map(p => [p.player_id, p]));
     const t2Map = new Map(t2Players.map(p => [p.player_id, p]));
-    const captain1 = t1Players.find(p => p.is_captain), captain2 = t2Players.find(p => p.is_captain);
-    const vc1 = t1Players.find(p => p.is_vice_captain), vc2 = t2Players.find(p => p.is_vice_captain);
+
+    const captain1 = t1Players.find(p => p.is_captain);
+    const captain2 = t2Players.find(p => p.is_captain);
+    const vc1 = t1Players.find(p => p.is_vice_captain);
+    const vc2 = t2Players.find(p => p.is_vice_captain);
+
+    // A player goes in the C&VC section ONLY if both teams have them AND their role differs
     const cvSharedIds = new Set();
-    [captain1, captain2, vc1, vc2].forEach(p => { if (p && t1Map.has(p.player_id) && t2Map.has(p.player_id)) cvSharedIds.add(p.player_id); });
+    t1Players.forEach(p1 => {
+      if (!t2Map.has(p1.player_id)) return;
+      const p2 = t2Map.get(p1.player_id);
+      const isCvEither = p1.is_captain || p1.is_vice_captain || p2.is_captain || p2.is_vice_captain;
+      if (!isCvEither) return;
+      const sameRole = p1.is_captain === p2.is_captain && p1.is_vice_captain === p2.is_vice_captain;
+      if (!sameRole) cvSharedIds.add(p1.player_id);
+    });
+
+    const onlyT1 = t1Players.filter(p => !t2Map.has(p.player_id));
+    const onlyT2 = t2Players.filter(p => !t1Map.has(p.player_id));
+    const common = t1Players
+      .filter(p => t2Map.has(p.player_id) && !cvSharedIds.has(p.player_id))
+      .map(p1 => ({ t1: p1, t2: t2Map.get(p1.player_id) }));
+
     setComparison({
       error: false, user1: leagueMembers.find(m => m.id === user.id), user2: leagueMembers.find(m => m.id === otherId),
       team1: t1, team2: t2, t1Map, t2Map, captain1, captain2, vc1, vc2, cvSharedIds,
@@ -223,16 +242,110 @@ export default function MatchDetail() {
               {!matchStarted && <div className="md-lb-lock-hint"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Teams visible after match starts</div>}
               {comparison?.error && <div className="empty" style={{ marginTop: 12 }}><div className="empty-icon">👥</div><p className="empty-text">Could not load teams</p></div>}
               {comparison && !comparison.error && (() => {
-                const c = comparison, t1T = c.team1.total_points || 0, t2T = c.team2.total_points || 0, diff = t1T - t2T;
-                return (<div className="md-cmp-overlay fade-in">
-                  <div className="md-cmp-overlay-header"><button className="md-cmp-back-btn" onClick={() => { setComparison(null); setCompareWith(null); }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M19 12H5"/><polyline points="12 19 5 12 12 5"/></svg> Back</button><span className="md-cmp-overlay-title">Comparison</span><div style={{ width: 60 }} /></div>
-                  <div className="md-cmp-overlay-body">
-                    <div className="cmp-score-strip card"><div className={`cmp-score-side ${t1T >= t2T ? 'cmp-winner' : ''}`}><div className="avatar" style={{ background: c.user1?.avatar_color, width: 36, height: 36, fontSize: 14 }}>{c.user1?.name?.[0]?.toUpperCase()}</div><div><div className="cmp-score-name">{c.user1?.name} (You)</div><div className="cmp-score-pts">{t1T}</div></div></div><div className="cmp-score-center"><div className={`cmp-total-diff ${diff > 0 ? 'pos' : diff < 0 ? 'neg' : ''}`}>{diff > 0 ? '+' : ''}{diff}</div><div className="cmp-score-diff-label">DIFF</div></div><div className={`cmp-score-side cmp-score-right ${t2T >= t1T ? 'cmp-winner' : ''}`}><div style={{ textAlign: 'right' }}><div className="cmp-score-name">{c.user2?.name}</div><div className="cmp-score-pts">{t2T}</div></div><div className="avatar" style={{ background: c.user2?.avatar_color, width: 36, height: 36, fontSize: 14 }}>{c.user2?.name?.[0]?.toUpperCase()}</div></div></div>
-                    {(c.onlyT1.length > 0 || c.onlyT2.length > 0) && <><CatHeader title="Different" pts1={c.onlyT1.reduce((s, p) => s + p.total_points, 0)} pts2={c.onlyT2.reduce((s, p) => s + p.total_points, 0)} /><div className="cmp-cat-body">{Array.from({ length: Math.max(c.onlyT1.length, c.onlyT2.length) }).map((_, i) => <div key={i} className="cmp-diff-row"><span className="cmp-diff-pts">{c.onlyT1[i]?.total_points ?? ''}</span><div className="cmp-diff-side left">{c.onlyT1[i] && <CmpChip p={c.onlyT1[i]} label={getLabel(c.onlyT1[i])} />}</div><div className="cmp-diff-vs">vs</div><div className="cmp-diff-side right">{c.onlyT2[i] && <CmpChip p={c.onlyT2[i]} label={getLabel(c.onlyT2[i])} />}</div><span className="cmp-diff-pts">{c.onlyT2[i]?.total_points ?? ''}</span></div>)}</div></>}
-                    {c.cvSharedIds.size > 0 && <><CatHeader title="C & VC" pts1={[c.captain1, c.vc1].filter(p => p && c.cvSharedIds.has(p.player_id)).reduce((s, p) => s + p.total_points, 0)} pts2={[c.captain2, c.vc2].filter(p => p && c.cvSharedIds.has(p.player_id)).reduce((s, p) => s + p.total_points, 0)} /><div className="cmp-cat-body">{c.captain1 && c.cvSharedIds.has(c.captain1.player_id) && (() => { const r = c.t2Map.get(c.captain1.player_id); return <div className="cmp-diff-row"><span className="cmp-diff-pts">{c.captain1.total_points}</span><div className="cmp-diff-side left"><CmpChip p={c.captain1} label="C" /></div><div className="cmp-diff-vs">vs</div><div className="cmp-diff-side right">{r && <CmpChip p={r} label={getLabel(r)} />}</div><span className="cmp-diff-pts">{r?.total_points ?? ''}</span></div>; })()}{c.vc1 && c.cvSharedIds.has(c.vc1.player_id) && (() => { const r = c.t2Map.get(c.vc1.player_id); return <div className="cmp-diff-row"><span className="cmp-diff-pts">{c.vc1.total_points}</span><div className="cmp-diff-side left"><CmpChip p={c.vc1} label="VC" /></div><div className="cmp-diff-vs">vs</div><div className="cmp-diff-side right">{r && <CmpChip p={r} label={getLabel(r)} />}</div><span className="cmp-diff-pts">{r?.total_points ?? ''}</span></div>; })()}</div></>}
-                    {c.common.length > 0 && <><CatHeader title="Common" pts1={c.common.reduce((s, x) => s + x.t1.total_points, 0)} pts2={c.common.reduce((s, x) => s + x.t2.total_points, 0)} /><div className="cmp-cat-body">{c.common.map(({ t1, t2 }) => <div key={t1.player_id} className="cmp-common-row"><span className="cmp-pts">{t1.total_points}</span><div className="cmp-diff-side left"><CmpChip p={t1} label={getLabel(t1)} /></div><div className="cmp-diff-vs"></div><div className="cmp-diff-side right"><CmpChip p={t2} label={getLabel(t2)} /></div><span className="cmp-pts">{t2.total_points}</span></div>)}</div></>}
+                const c = comparison;
+                const t1Total = c.team1.total_points || 0;
+                const t2Total = c.team2.total_points || 0;
+                const diff = t1Total - t2Total;
+                return (
+                  <div className="md-cmp-overlay fade-in">
+                    <div className="md-cmp-overlay-header">
+                      <button className="md-cmp-back-btn" onClick={() => { setComparison(null); setCompareWith(null); }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5"/><polyline points="12 19 5 12 12 5"/></svg>
+                        Back
+                      </button>
+                      <span className="md-cmp-overlay-title">Comparison</span>
+                      <div style={{ width: 60 }} />
+                    </div>
+
+                    <div className="md-cmp-overlay-body">
+                      <div className="cmp-score-strip card">
+                        <div className={`cmp-score-side ${t1Total >= t2Total ? 'cmp-winner' : ''}`}>
+                          <div className="avatar" style={{ background: c.user1?.avatar_color || 'var(--bg-elevated)', width: 36, height: 36, fontSize: 14 }}>
+                            {c.user1?.name?.[0]?.toUpperCase()}
+                          </div>
+                          <div>
+                            <div className="cmp-score-name">{c.user1?.name} (You)</div>
+                            <div className="cmp-score-pts">{t1Total}</div>
+                          </div>
+                        </div>
+                        <div className="cmp-score-center">
+                          <div className={`cmp-total-diff ${diff > 0 ? 'pos' : diff < 0 ? 'neg' : ''}`}>{diff > 0 ? '+' : ''}{diff}</div>
+                          <div className="cmp-score-diff-label">DIFF</div>
+                        </div>
+                        <div className={`cmp-score-side cmp-score-right ${t2Total >= t1Total ? 'cmp-winner' : ''}`}>
+                          <div style={{ textAlign: 'right' }}>
+                            <div className="cmp-score-name">{c.user2?.name}</div>
+                            <div className="cmp-score-pts">{t2Total}</div>
+                          </div>
+                          <div className="avatar" style={{ background: c.user2?.avatar_color || 'var(--bg-elevated)', width: 36, height: 36, fontSize: 14 }}>
+                            {c.user2?.name?.[0]?.toUpperCase()}
+                          </div>
+                        </div>
+                      </div>
+
+                      {(c.onlyT1.length > 0 || c.onlyT2.length > 0) && (
+                        <>
+                          <CatHeader title="Different Players"
+                            pts1={c.onlyT1.reduce((s, p) => s + p.total_points, 0)}
+                            pts2={c.onlyT2.reduce((s, p) => s + p.total_points, 0)} />
+                          <div className="cmp-cat-body">
+                            {Array.from({ length: Math.max(c.onlyT1.length, c.onlyT2.length) }).map((_, i) => (
+                              <div key={i} className="cmp-diff-row">
+                                <span className="cmp-diff-pts">{c.onlyT1[i] ? c.onlyT1[i].total_points : ''}</span>
+                                <div className="cmp-diff-side left">{c.onlyT1[i] && <CmpChip p={c.onlyT1[i]} label={getLabel(c.onlyT1[i])} />}</div>
+                                <div className="cmp-diff-vs">vs</div>
+                                <div className="cmp-diff-side right">{c.onlyT2[i] && <CmpChip p={c.onlyT2[i]} label={getLabel(c.onlyT2[i])} />}</div>
+                                <span className="cmp-diff-pts">{c.onlyT2[i] ? c.onlyT2[i].total_points : ''}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </>
+                      )}
+
+                      {c.cvSharedIds.size > 0 && (
+                        <>
+                          <CatHeader title="Common Players · Different Roles"
+                            pts1={[...c.cvSharedIds].reduce((s, id) => s + c.t1Map.get(id).total_points, 0)}
+                            pts2={[...c.cvSharedIds].reduce((s, id) => s + c.t2Map.get(id).total_points, 0)} />
+                          <div className="cmp-cat-body">
+                            {[...c.cvSharedIds].map(id => {
+                              const left = c.t1Map.get(id);
+                              const right = c.t2Map.get(id);
+                              return (
+                                <div key={id} className="cmp-diff-row">
+                                  <span className="cmp-diff-pts">{left.total_points}</span>
+                                  <div className="cmp-diff-side left"><CmpChip p={left} label={getLabel(left)} /></div>
+                                  <div className="cmp-diff-vs">vs</div>
+                                  <div className="cmp-diff-side right"><CmpChip p={right} label={getLabel(right)} /></div>
+                                  <span className="cmp-diff-pts">{right.total_points}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </>
+                      )}
+
+                      {c.common.length > 0 && (
+                        <>
+                          <CatHeader title="Common Players"
+                            pts1={c.common.reduce((s, x) => s + x.t1.total_points, 0)}
+                            pts2={c.common.reduce((s, x) => s + x.t2.total_points, 0)} />
+                          <div className="cmp-cat-body">
+                            {c.common.map(({ t1, t2 }) => (
+                              <div key={t1.player_id} className="cmp-common-row">
+                                <span className="cmp-pts">{t1.total_points}</span>
+                                <div className="cmp-diff-side left"><CmpChip p={t1} label={getLabel(t1)} /></div>
+                                <div className="cmp-diff-vs"></div>
+                                <div className="cmp-diff-side right"><CmpChip p={t2} label={getLabel(t2)} /></div>
+                                <span className="cmp-pts">{t2.total_points}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </div>
-                </div>);
+                );
               })()}
             </div>
           )}

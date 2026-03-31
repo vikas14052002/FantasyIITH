@@ -157,9 +157,15 @@ export default function Leaderboard() {
     const captain2 = t2Players.find(p => p.is_captain);
     const vc1 = t1Players.find(p => p.is_vice_captain);
     const vc2 = t2Players.find(p => p.is_vice_captain);
+    // A player goes in the C&VC section ONLY if both teams have them AND their role differs
     const cvSharedIds = new Set();
-    [captain1, captain2, vc1, vc2].forEach(p => {
-      if (p && t1Map.has(p.player_id) && t2Map.has(p.player_id)) cvSharedIds.add(p.player_id);
+    t1Players.forEach(p1 => {
+      if (!t2Map.has(p1.player_id)) return;
+      const p2 = t2Map.get(p1.player_id);
+      const isCvEither = p1.is_captain || p1.is_vice_captain || p2.is_captain || p2.is_vice_captain;
+      if (!isCvEither) return;
+      const sameRole = p1.is_captain === p2.is_captain && p1.is_vice_captain === p2.is_vice_captain;
+      if (!sameRole) cvSharedIds.add(p1.player_id);
     });
     const onlyT1 = t1Players.filter(p => !t2Map.has(p.player_id));
     const onlyT2 = t2Players.filter(p => !t1Map.has(p.player_id));
@@ -335,21 +341,22 @@ export default function Leaderboard() {
                     {c.cvSharedIds.size > 0 && (
                       <>
                         <LbCategoryHeader title="Common Players · Different Roles"
-                          pts1={[c.captain1, c.vc1].filter(p => p && c.cvSharedIds.has(p.player_id)).reduce((s, p) => s + p.total_points, 0)}
-                          pts2={[c.captain2, c.vc2].filter(p => p && c.cvSharedIds.has(p.player_id)).reduce((s, p) => s + p.total_points, 0)} />
+                          pts1={[...c.cvSharedIds].reduce((s, id) => s + c.t1Map.get(id).total_points, 0)}
+                          pts2={[...c.cvSharedIds].reduce((s, id) => s + c.t2Map.get(id).total_points, 0)} />
                         <div className="cmp-cat-body">
-                          {c.captain1 && c.cvSharedIds.has(c.captain1.player_id) && (
-                            <LbCVRow p1={c.captain1} label1="C" p2Right={c.t2Map.get(c.captain1.player_id)} isUser1Row />
-                          )}
-                          {c.captain2 && c.captain2.player_id !== c.captain1?.player_id && c.cvSharedIds.has(c.captain2.player_id) && (
-                            <LbCVRow p2={c.captain2} label2="C" p1Left={c.t1Map.get(c.captain2.player_id)} />
-                          )}
-                          {c.vc1 && c.cvSharedIds.has(c.vc1.player_id) && (
-                            <LbCVRow p1={c.vc1} label1="VC" p2Right={c.t2Map.get(c.vc1.player_id)} isUser1Row />
-                          )}
-                          {c.vc2 && c.vc2.player_id !== c.vc1?.player_id && c.cvSharedIds.has(c.vc2.player_id) && (
-                            <LbCVRow p2={c.vc2} label2="VC" p1Left={c.t1Map.get(c.vc2.player_id)} />
-                          )}
+                          {[...c.cvSharedIds].map(id => {
+                            const left = c.t1Map.get(id);
+                            const right = c.t2Map.get(id);
+                            return (
+                              <div key={id} className="cmp-diff-row">
+                                <span className="cmp-diff-pts">{left.total_points}</span>
+                                <div className="cmp-diff-side left"><LbPlayerChip p={left} label={getLabelFn(left)} /></div>
+                                <div className="cmp-diff-vs">vs</div>
+                                <div className="cmp-diff-side right"><LbPlayerChip p={right} label={getLabelFn(right)} /></div>
+                                <span className="cmp-diff-pts">{right.total_points}</span>
+                              </div>
+                            );
+                          })}
                         </div>
                       </>
                     )}

@@ -40,6 +40,27 @@ export default function CaptainSelect() {
     if (!captainId || !vcId) return;
     setSaving(true);
 
+    // Re-check payment gate server-side before saving
+    if (import.meta.env.VITE_PAYMENTS_ENABLED === 'true') {
+      const { count } = await supabase
+        .from('teams')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id);
+      if (count > 0) {
+        const { data: userData } = await supabase
+          .from('users')
+          .select('has_paid')
+          .eq('id', user.id)
+          .single();
+        if (!userData?.has_paid) {
+          alert('Season pass required. Please complete payment before submitting your team.');
+          setSaving(false);
+          navigate(`/create-team/${matchId}/${leagueId}`);
+          return;
+        }
+      }
+    }
+
     const totalCredits = players.reduce((s, p) => s + p.credits, 0);
 
     // Create team

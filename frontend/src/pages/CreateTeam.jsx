@@ -46,6 +46,8 @@ export default function CreateTeam() {
   const [sortDir, setSortDir] = useState('desc');
   const [showSelectedStrip, setShowSelectedStrip] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [showPayment, setShowPayment] = useState(false);
+  const [paymentLoading, setPaymentLoading] = useState(false);
   const navigate = useNavigate();
   const listRef = useRef(null);
   const user = getUser();
@@ -86,10 +88,95 @@ export default function CreateTeam() {
           if (cap) setExistingCaptainId(cap.player_id);
           if (vc) setExistingVcId(vc.player_id);
         }
+      } else if (import.meta.env.VITE_PAYMENTS_ENABLED === 'true') {
+        // New team — first match is free, season pass required after that
+        const { count } = await supabase
+          .from('teams')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', user.id);
+        if (count > 0) {
+          const { data: userData } = await supabase
+            .from('users')
+            .select('has_paid')
+            .eq('id', user.id)
+            .single();
+          if (!userData?.has_paid) {
+            setShowPayment(true);
+            setLoading(false);
+            return;
+          }
+        }
       }
     }
 
     setLoading(false);
+  }
+
+  function loadRazorpayScript() {
+    return new Promise((resolve) => {
+      if (document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]')) {
+        resolve(true);
+        return;
+      }
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  }
+
+  async function handlePayment() {
+    setPaymentLoading(true);
+    try {
+      const { data: orderData, error: orderErr } = await supabase.functions.invoke('payment-handler', {
+        body: { action: 'create-order' },
+      });
+      if (orderErr || !orderData?.order_id) {
+        const detail = orderErr?.message || orderData?.error || JSON.stringify(orderData);
+        throw new Error(`Could not initiate payment: ${detail}`);
+      }
+
+      const loaded = await loadRazorpayScript();
+      if (!loaded) throw new Error('Failed to load payment SDK. Check your connection.');
+
+      const options = {
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+        amount: 7500,
+        currency: 'INR',
+        name: 'FantasyIITH',
+        description: 'Season Pass — unlimited entries',
+        order_id: orderData.order_id,
+        handler: async (response) => {
+          const { data: vData, error: vErr } = await supabase.functions.invoke('payment-handler', {
+            body: {
+              action: 'verify-payment',
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              user_id: user.id,
+            },
+          });
+          if (vErr || !vData?.success) {
+            alert('Payment could not be verified. Please contact support with your payment ID: ' + response.razorpay_payment_id);
+            return;
+          }
+          // Update cached user in localStorage
+          const updatedUser = { ...user, has_paid: true };
+          localStorage.setItem('user', JSON.stringify(updatedUser));
+          setShowPayment(false);
+        },
+        prefill: { name: user.name },
+        theme: { color: '#D91E36' },
+        modal: { ondismiss: () => setPaymentLoading(false) },
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.open();
+    } catch (err) {
+      alert(err.message || 'Payment failed. Please try again.');
+      setPaymentLoading(false);
+    }
   }
 
   const usedCredits = useMemo(() => selected.reduce((s, p) => s + p.credits, 0), [selected]);
@@ -156,6 +243,45 @@ export default function CreateTeam() {
   const allRolesValid = ROLES.every(r => roleCounts[r] >= ROLE_LIMITS[r].min);
 
   if (loading) return <div className="loader"><div className="spinner" /></div>;
+
+  if (showPayment) {
+    return (
+      <div className="create-team-page" style={{ justifyContent: 'center', alignItems: 'center', padding: 32 }}>
+        <div style={{ textAlign: 'center', maxWidth: 320, width: '100%' }}>
+          <div style={{ fontSize: 52, marginBottom: 16 }}>🏏</div>
+          <h2 style={{ color: 'var(--text-primary)', margin: '0 0 8px', fontSize: 22 }}>Season Pass</h2>
+          <p style={{ color: 'var(--text-muted)', margin: '0 0 28px', lineHeight: 1.6, fontSize: 14 }}>
+            Your first match was free! Get the season pass for<br />unlimited entries for the rest of the season.
+          </p>
+          <div style={{
+            background: 'var(--bg-elevated)',
+            borderRadius: 14,
+            padding: '20px 24px',
+            marginBottom: 24,
+            border: '1px solid var(--border)',
+          }}>
+            <div style={{ fontSize: 40, fontWeight: 700, color: 'var(--accent)', lineHeight: 1 }}>₹75</div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6 }}>one-time · entire season · multiple leagues</div>
+          </div>
+          <button
+            className="btn btn-primary"
+            style={{ width: '100%', marginBottom: 12, height: 48, fontSize: 15 }}
+            disabled={paymentLoading}
+            onClick={handlePayment}
+          >
+            {paymentLoading ? 'Opening payment...' : 'PAY ₹75 & CONTINUE'}
+          </button>
+          <button
+            className="btn"
+            style={{ width: '100%', color: 'var(--text-muted)', height: 44 }}
+            onClick={() => navigate(-1)}
+          >
+            GO BACK
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // Block team creation/editing after match starts
   if (match && hasMatchStarted(match)) {
