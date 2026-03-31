@@ -1,6 +1,7 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { getUser } from './lib/auth';
+import { startHeartbeat } from './lib/heartbeat';
 import { initTheme } from './lib/theme';
 import Header from './components/Header';
 import BottomNav from './components/BottomNav';
@@ -55,6 +56,7 @@ function PageLoader() {
 }
 
 export default function App() {
+  useEffect(() => { startHeartbeat(); }, []);
   return (
     <BrowserRouter>
       <OfflineBanner />
