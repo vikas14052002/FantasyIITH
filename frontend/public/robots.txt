@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /create-team/
+Disallow: /backup-select/
+Disallow: /captain-select/
+Disallow: /team-preview/
+
+Sitemap: https://playxifantasy.vercel.app/sitemap.xml

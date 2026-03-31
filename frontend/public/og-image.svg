@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0D0D1A"/>
+      <stop offset="100%" style="stop-color:#1a1a3e"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#D91E36"/>
+      <stop offset="100%" style="stop-color:#FF4757"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <!-- Cricket field circle -->
+  <circle cx="900" cy="315" r="250" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="2"/>
+  <circle cx="900" cy="315" r="150" fill="none" stroke="rgba(255,255,255,0.03)" stroke-width="1.5"/>
+  <!-- Accent line -->
+  <rect x="80" y="280" width="80" height="4" rx="2" fill="url(#accent)"/>
+  <!-- Text -->
+  <text x="80" y="250" font-family="system-ui, -apple-system, sans-serif" font-size="28" fill="rgba(255,255,255,0.5)" font-weight="500">Fantasy Cricket League</text>
+  <text x="80" y="340" font-family="system-ui, -apple-system, sans-serif" font-size="72" fill="#FFFFFF" font-weight="800">Play</text>
+  <text x="260" y="340" font-family="system-ui, -apple-system, sans-serif" font-size="72" fill="#D91E36" font-weight="800">XI</text>
+  <text x="80" y="400" font-family="system-ui, -apple-system, sans-serif" font-size="24" fill="rgba(255,255,255,0.6)" font-weight="400">Build your Dream XI. Join leagues. Compete live.</text>
+  <!-- Cricket emoji -->
+  <text x="80" y="500" font-size="40">🏏</text>
+  <text x="140" y="498" font-family="system-ui, -apple-system, sans-serif" font-size="18" fill="rgba(255,255,255,0.35)" font-weight="500">IPL 2026 • playxifantasy.vercel.app</text>
+  <!-- Decorative dots -->
+  <circle cx="1050" cy="150" r="4" fill="rgba(217,30,54,0.3)"/>
+  <circle cx="1100" cy="200" r="3" fill="rgba(217,30,54,0.2)"/>
+  <circle cx="980" cy="120" r="5" fill="rgba(217,30,54,0.15)"/>
+</svg>
