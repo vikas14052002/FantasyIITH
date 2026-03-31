@@ -1,5 +1,18 @@
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './PointsSystem.css';
+
+// FAQ JSON-LD for AI search
+const FAQ_JSONLD = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: [
+    { '@type': 'Question', name: 'How are fantasy cricket points calculated in PlayXI?', acceptedAnswer: { '@type': 'Answer', text: 'Points are awarded for runs (1 per run), boundaries (4 bonus for 4s, 6 bonus for 6s), wickets (30 each), catches (8 each), stumpings (12 each), run outs (12 each), and maidens (12 each). Bonus points for milestones like half-centuries (+8) and centuries (+16). Duck penalty of -2 for batsmen.' }},
+    { '@type': 'Question', name: 'What does a captain and vice-captain get in PlayXI?', acceptedAnswer: { '@type': 'Answer', text: 'The captain earns 2x points and the vice-captain earns 1.5x points based on their actual match performance.' }},
+    { '@type': 'Question', name: 'How many players can I pick in a fantasy cricket team?', acceptedAnswer: { '@type': 'Answer', text: 'You pick 11 players within a 100-credit budget. Constraints: 1-4 Wicket-Keepers, 3-6 Batsmen, 1-4 All-Rounders, 3-6 Bowlers. Maximum 7 players from one team.' }},
+    { '@type': 'Question', name: 'Can I edit my team after creating it?', acceptedAnswer: { '@type': 'Answer', text: 'Yes, you can edit your team anytime before the match starts. Once the match begins, your team is locked.' }},
+  ],
+};
 
 const sections = [
   {
@@ -73,6 +86,16 @@ const sections = [
 
 export default function PointsSystem() {
   const navigate = useNavigate();
+
+  useEffect(() => {
+    document.title = 'Points System - PlayXI Fantasy Cricket';
+    const script = document.createElement('script');
+    script.type = 'application/ld+json';
+    script.text = JSON.stringify(FAQ_JSONLD);
+    script.id = 'faq-jsonld';
+    document.head.appendChild(script);
+    return () => document.head.querySelector('#faq-jsonld')?.remove();
+  }, []);
 
   return (
     <div className="pts-page">

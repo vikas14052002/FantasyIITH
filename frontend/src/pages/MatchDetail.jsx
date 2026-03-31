@@ -30,6 +30,33 @@ export default function MatchDetail() {
 
   useEffect(() => { loadMatch(); }, [id]);
   useEffect(() => { if (selectedLeague) loadLeagueData(); }, [selectedLeague]);
+
+  // Inject SportsEvent JSON-LD
+  useEffect(() => {
+    if (!match) return;
+    const ld = {
+      '@context': 'https://schema.org',
+      '@type': 'SportsEvent',
+      name: `${match.team1_short} vs ${match.team2_short} - IPL 2026`,
+      startDate: match.start_time,
+      location: { '@type': 'Place', name: match.venue || 'TBD' },
+      competitor: [
+        { '@type': 'SportsTeam', name: match.team1_name || match.team1_short },
+        { '@type': 'SportsTeam', name: match.team2_name || match.team2_short },
+      ],
+      description: `Fantasy cricket for Match ${match.match_number} on PlayXI`,
+    };
+    const script = document.createElement('script');
+    script.type = 'application/ld+json';
+    script.text = JSON.stringify(ld);
+    script.id = 'match-jsonld';
+    document.head.querySelector('#match-jsonld')?.remove();
+    document.head.appendChild(script);
+    // Update page title
+    document.title = `${match.team1_short} vs ${match.team2_short} - PlayXI`;
+    return () => document.head.querySelector('#match-jsonld')?.remove();
+  }, [match]);
+
   useEffect(() => {
     if (!match || match.status !== 'live') return;
     const interval = setInterval(() => { refreshData(); }, 30000);
