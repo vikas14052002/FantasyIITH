@@ -76,7 +76,7 @@
 }
 
 .ld-member-row.clickable:active {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--bg-elevated);
 }
 
 .ld-member-row.is-me {

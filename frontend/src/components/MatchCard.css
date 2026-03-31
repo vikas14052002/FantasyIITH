@@ -15,7 +15,7 @@
 
 /* Glassmorphism inner card */
 .match-card-inner {
-  background: rgba(28, 28, 46, 0.85);
+  background: var(--glass-bg);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-radius: calc(var(--radius-lg) - 2px);

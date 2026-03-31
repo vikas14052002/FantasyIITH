@@ -116,7 +116,7 @@ select.input option {
 }
 
 .lb-match-row.lb-clickable:active {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--bg-elevated);
   margin: 0 -14px;
   padding: 8px 14px;
 }
