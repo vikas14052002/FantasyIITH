@@ -15,6 +15,15 @@ export default function Home() {
 
   useEffect(() => { loadData(); }, []);
 
+  // Auto-refresh every 30s to catch status changes (upcoming → live → completed)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      supabase.from('matches').select('*').order('match_number', { ascending: false })
+        .then(({ data }) => { if (data) setMatches(data); });
+    }, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
   async function loadData() {
     const [matchRes, leagueRes] = await Promise.all([
       supabase.from('matches').select('*').order('match_number', { ascending: false }),
@@ -24,6 +33,13 @@ export default function Home() {
     setLeagues((leagueRes.data || []).map(lm => lm.leagues));
     setLoading(false);
   }
+
+  // Auto-switch to Live tab when a live match appears
+  useEffect(() => {
+    if (matches.some(m => m.status === 'live') && activeTab === 'upcoming') {
+      setActiveTab('live');
+    }
+  }, [matches]);
 
   const tabCounts = {
     upcoming: matches.filter(m => m.status === 'upcoming').length,
