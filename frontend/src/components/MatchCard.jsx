@@ -6,12 +6,14 @@ import { getUser } from '../lib/auth';
 import { supabase } from '../lib/supabase';
 import './MatchCard.css';
 
-export default function MatchCard({ match, leagueId }) {
+export default function MatchCard({ match, leagueId, hasTeam: hasTeamProp }) {
   const navigate = useNavigate();
   const user = getUser();
   const [existingTeam, setExistingTeam] = useState(null);
 
   useEffect(() => {
+    // Only query individually if parent didn't provide the info
+    if (hasTeamProp !== undefined) return;
     if (leagueId && user) {
       supabase
         .from('teams')
@@ -22,7 +24,9 @@ export default function MatchCard({ match, leagueId }) {
         .maybeSingle()
         .then(({ data }) => setExistingTeam(data));
     }
-  }, [match.id, leagueId, user?.id]);
+  }, [match.id, leagueId, user?.id, hasTeamProp]);
+
+  const teamExists = hasTeamProp !== undefined ? hasTeamProp : !!existingTeam;
 
   const handleClick = () => {
     if (match.status === 'upcoming' && leagueId) {
@@ -85,8 +89,8 @@ export default function MatchCard({ match, leagueId }) {
             <>
               <CountdownTimer targetDate={match.start_time} />
               {leagueId && (
-                <span className={`mc-team-status ${existingTeam ? 'mc-has-team' : ''}`}>
-                  {existingTeam ? 'Edit Team' : 'Create Team'}
+                <span className={`mc-team-status ${teamExists ? 'mc-has-team' : ''}`}>
+                  {teamExists ? 'Edit Team' : 'Create Team'}
                 </span>
               )}
             </>

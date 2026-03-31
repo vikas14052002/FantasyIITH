@@ -165,3 +165,76 @@
 .ld-chevron {
   color: var(--text-muted);
 }
+
+/* ── Subtabs (nested Live/Upcoming/Completed) ── */
+.ld-subtabs {
+  margin-top: 8px;
+  margin-bottom: 4px;
+}
+
+/* ── Breakdown Sheet ── */
+.ld-breakdown-sheet {
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.ld-breakdown-body {
+  overflow-y: auto;
+  padding: 8px 16px 24px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.ld-breakdown-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.ld-breakdown-left {
+  flex: 1;
+  min-width: 0;
+}
+
+.ld-breakdown-match {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.ld-breakdown-teams {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.ld-breakdown-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.ld-breakdown-rank {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.ld-breakdown-pts {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.ld-breakdown-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 0 4px;
+  font-size: 13px;
+  font-weight: 700;
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
+}

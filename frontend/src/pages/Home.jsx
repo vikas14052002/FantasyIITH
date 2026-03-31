@@ -29,8 +29,13 @@ export default function Home() {
       supabase.from('matches').select('*').order('match_number', { ascending: false }),
       supabase.from('league_members').select('league_id, leagues(*)').eq('user_id', user.id),
     ]);
-    setMatches(matchRes.data || []);
+    const matchData = matchRes.data || [];
+    setMatches(matchData);
     setLeagues((leagueRes.data || []).map(lm => lm.leagues));
+    // Auto-select most relevant tab: live > upcoming > completed
+    if (matchData.some(m => m.status === 'live')) setActiveTab('live');
+    else if (matchData.some(m => m.status === 'upcoming')) setActiveTab('upcoming');
+    else setActiveTab('completed');
     setLoading(false);
   }
 
@@ -76,7 +81,7 @@ export default function Home() {
             <p className="empty-text">No {activeTab} matches</p>
           </div>
         ) : (
-          filtered.map(m => <MatchCard key={m.id} match={m} leagueId={firstLeague?.id} />)
+          filtered.map(m => <MatchCard key={m.id} match={m} leagueId={firstLeague?.id} existingTeamIds={null} />)
         )}
       </div>
 

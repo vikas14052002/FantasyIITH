@@ -197,7 +197,7 @@ export default function CaptainSelect() {
         <div className="ct-step-line done" />
         <div className="ct-step active">
           <div className="ct-step-dot active">2</div>
-          <span className="ct-step-label">Captain</span>
+          <span className="ct-step-label">Roles</span>
         </div>
         <div className="ct-step-line" />
         <div className="ct-step">

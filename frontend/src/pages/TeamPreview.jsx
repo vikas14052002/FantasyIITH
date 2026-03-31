@@ -80,11 +80,9 @@ export default function TeamPreview() {
     return (
       <div className="preview-page">
         <div className="preview-header">
-          <button className="preview-back" onClick={() => navigate(-1)}>←</button>
           <div className="preview-header-center">
             <span className="preview-match-title">Team Locked</span>
           </div>
-          <div style={{ width: 32 }} />
         </div>
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
           <div className="empty">
@@ -119,7 +117,7 @@ export default function TeamPreview() {
     <div className="preview-page">
       {/* Top header bar */}
       <div className="preview-header">
-        <button className="preview-back" onClick={() => navigate(`/leagues/${team.league_id}`)}>←</button>
+        <div style={{ width: 32 }} />
         <div className="preview-header-center">
           <span className="preview-match-title">{team1} vs {team2}</span>
           <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>

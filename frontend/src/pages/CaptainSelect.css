@@ -76,3 +76,74 @@
   border-color: var(--blue);
   color: white;
 }
+
+/* Stepper */
+.ct-stepper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 24px;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border);
+  gap: 0;
+}
+
+.ct-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.ct-step-dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ct-step-dot.done {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+
+.ct-step-dot.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+.ct-step-label {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.ct-step.done .ct-step-label,
+.ct-step.active .ct-step-label {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.ct-step-line {
+  flex: 1;
+  height: 2px;
+  background: var(--border);
+  margin: 0 6px;
+  margin-bottom: 14px;
+  min-width: 32px;
+}
+
+.ct-step-line.done {
+  background: var(--border);
+}

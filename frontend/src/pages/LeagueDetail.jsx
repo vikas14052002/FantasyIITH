@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { getUser } from '../lib/auth';
-import { hasMatchStarted } from '../lib/matchLock';
 import MatchCard from '../components/MatchCard';
 import ShareSheet from '../components/ShareSheet';
 import './LeagueDetail.css';
@@ -12,9 +11,11 @@ export default function LeagueDetail() {
   const [league, setLeague] = useState(null);
   const [members, setMembers] = useState([]);
   const [matches, setMatches] = useState([]);
-  const [activeTab, setActiveTab] = useState('matches');
-  const [selectedMatchId, setSelectedMatchId] = useState(null);
   const [teams, setTeams] = useState([]);
+  const [activeTab, setActiveTab] = useState('matches');
+  const [matchSubTab, setMatchSubTab] = useState('upcoming');
+  const [scores, setScores] = useState([]);
+  const [scoresLoaded, setScoresLoaded] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showShare, setShowShare] = useState(false);
   const navigate = useNavigate();
@@ -22,10 +23,9 @@ export default function LeagueDetail() {
 
   useEffect(() => { loadLeague(); }, [id]);
 
-  // When match selection changes, load teams for that match
   useEffect(() => {
-    if (selectedMatchId) loadTeamsForMatch(selectedMatchId);
-  }, [selectedMatchId]);
+    if (activeTab === 'leaderboard' && !scoresLoaded) loadScores();
+  }, [activeTab, scoresLoaded]);
 
   async function loadLeague() {
     const [leagueRes, membersRes, matchesRes, teamsRes] = await Promise.all([
@@ -36,67 +36,54 @@ export default function LeagueDetail() {
     ]);
     setLeague(leagueRes.data);
     setMembers((membersRes.data || []).map(m => m.users));
-    setMatches(matchesRes.data || []);
+    const matchesData = matchesRes.data || [];
+    setMatches(matchesData);
     setTeams(teamsRes.data || []);
 
-    // Default to first match with any teams, or first match overall
-    const matchesData = matchesRes.data || [];
-    const teamsData = teamsRes.data || [];
-    const matchWithTeams = matchesData.find(m => teamsData.some(t => t.match_id === m.id));
-    if (matchWithTeams) setSelectedMatchId(matchWithTeams.id);
-    else if (matchesData.length > 0) setSelectedMatchId(matchesData[0].id);
+    if (matchesData.some(m => m.status === 'live')) setMatchSubTab('live');
+    else if (matchesData.some(m => m.status === 'upcoming')) setMatchSubTab('upcoming');
+    else setMatchSubTab('completed');
 
     setLoading(false);
   }
 
-  async function loadTeamsForMatch(matchId) {
+  async function loadScores() {
     const { data } = await supabase
-      .from('teams')
-      .select('id, user_id, match_id, total_points')
-      .eq('league_id', id)
-      .eq('match_id', matchId);
-    if (data) {
-      setTeams(prev => {
-        // Replace teams for this match, keep others
-        const other = prev.filter(t => t.match_id !== matchId);
-        return [...other, ...data];
+      .from('scores')
+      .select('*, users(*)')
+      .eq('league_id', id);
+    setScores(data || []);
+    setScoresLoaded(true);
+  }
+
+  const matchTabCounts = useMemo(() => ({
+    live: matches.filter(m => m.status === 'live').length,
+    upcoming: matches.filter(m => m.status === 'upcoming').length,
+    completed: matches.filter(m => m.status === 'completed').length,
+  }), [matches]);
+
+  const filteredMatches = useMemo(() => {
+    return matches
+      .filter(m => m.status === matchSubTab)
+      .sort((a, b) => {
+        if (matchSubTab === 'upcoming') return new Date(a.start_time) - new Date(b.start_time);
+        return new Date(b.start_time) - new Date(a.start_time);
       });
-    }
-  }
+  }, [matches, matchSubTab]);
 
-  const selectedMatch = useMemo(() =>
-    matches.find(m => m.id === selectedMatchId), [matches, selectedMatchId]);
-
-  // Build member list with their team info for the selected match
-  const membersWithTeams = useMemo(() => {
-    return members.map(m => {
-      const team = teams.find(t => t.user_id === m.id && t.match_id === selectedMatchId);
-      return { ...m, team };
-    }).sort((a, b) => {
-      // Members with teams first, sorted by points desc
-      if (a.team && !b.team) return -1;
-      if (!a.team && b.team) return 1;
-      if (a.team && b.team) return (b.team.total_points || 0) - (a.team.total_points || 0);
-      return a.name.localeCompare(b.name);
+  const overallScores = useMemo(() => {
+    const pointsMap = {};
+    scores.forEach(s => {
+      if (!pointsMap[s.user_id]) pointsMap[s.user_id] = 0;
+      pointsMap[s.user_id] += s.total_points;
     });
-  }, [members, teams, selectedMatchId]);
-
-  const handleShare = () => {
-    setShowShare(true);
-  };
-
-  function handleMemberClick(member) {
-    if (!member.team) return;
-    const isMe = member.id === user?.id;
-    // Can only view others' teams after match starts
-    if (!isMe && selectedMatch && !hasMatchStarted(selectedMatch)) return;
-    navigate(`/team-preview/${member.team.id}`);
-  }
+    return members
+      .map(m => ({ ...m, total_points: pointsMap[m.id] || 0 }))
+      .sort((a, b) => b.total_points - a.total_points);
+  }, [members, scores]);
 
   if (loading) return <div className="loader"><div className="spinner" /></div>;
   if (!league) return <div className="page"><p>League not found</p></div>;
-
-  const currentUserTeam = teams.find(t => t.user_id === user?.id && t.match_id === selectedMatchId);
 
   return (
     <div className="page fade-in">
@@ -107,125 +94,99 @@ export default function LeagueDetail() {
           onClose={() => setShowShare(false)}
         />
       )}
+
       <div className="card" style={{ marginBottom: 16, textAlign: 'center' }}>
         <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>{league.name}</h2>
         <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 12 }}>
           {members.length} member{members.length !== 1 ? 's' : ''}
         </p>
-        <div style={{ display: 'flex', gap: 8, justifyContent: 'center', alignItems: 'center', marginBottom: 12 }}>
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'center', alignItems: 'center' }}>
           <span style={{ background: 'var(--bg-elevated)', padding: '6px 16px', borderRadius: 8, fontWeight: 700, letterSpacing: 2 }}>
             {league.invite_code}
           </span>
-          <button className="btn btn-outline" style={{ width: 'auto', minHeight: 36, padding: '6px 16px', fontSize: 12 }} onClick={handleShare}>
+          <button className="btn btn-outline" style={{ width: 'auto', minHeight: 36, padding: '6px 16px', fontSize: 12 }} onClick={() => setShowShare(true)}>
             Share
-          </button>
-        </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button className="btn btn-primary" style={{ flex: 1, minHeight: 40, fontSize: 13 }}
-            onClick={() => navigate(`/leaderboard?league=${id}`)}>
-            Leaderboard
-          </button>
-          <button className="btn btn-outline" style={{ flex: 1, minHeight: 40, fontSize: 13 }}
-            onClick={() => navigate(`/compare/${id}`)}>
-            Compare
           </button>
         </div>
       </div>
 
       <div className="tabs">
         <button className={`tab ${activeTab === 'matches' ? 'active' : ''}`} onClick={() => setActiveTab('matches')}>Matches</button>
-        <button className={`tab ${activeTab === 'members' ? 'active' : ''}`} onClick={() => setActiveTab('members')}>Members</button>
+        <button className={`tab ${activeTab === 'leaderboard' ? 'active' : ''}`} onClick={() => setActiveTab('leaderboard')}>Leaderboard</button>
       </div>
 
       {activeTab === 'matches' ? (
-        matches.map(m => <MatchCard key={m.id} match={m} leagueId={id} />)
-      ) : (
-        <div className="ld-members">
-          {/* Match selector */}
-          <div className="ld-match-select-wrap">
-            <select
-              className="ld-match-select"
-              value={selectedMatchId || ''}
-              onChange={e => setSelectedMatchId(e.target.value)}
-            >
-              {matches.map(m => (
-                <option key={m.id} value={m.id}>
-                  Match {m.match_number} — {m.team1_short} vs {m.team2_short}
-                  {m.status === 'live' ? ' (Live)' : m.status === 'completed' ? ' (Done)' : ''}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Match info bar */}
-          {selectedMatch && (
-            <div className="ld-match-info">
-              <span className="ld-match-teams">{selectedMatch.team1_short} vs {selectedMatch.team2_short}</span>
-              <span className={`badge badge-${selectedMatch.status}`}>
-                {selectedMatch.status === 'live' ? '● LIVE' : selectedMatch.status.toUpperCase()}
-              </span>
-            </div>
-          )}
-
-          {/* Create/Edit team CTA for current user */}
-          {selectedMatch?.status === 'upcoming' && (
-            <button
-              className={`btn ${currentUserTeam ? 'btn-outline' : 'btn-primary'} ld-team-cta`}
-              onClick={() => navigate(`/create-team/${selectedMatchId}/${id}`)}
-            >
-              {currentUserTeam ? 'Edit Your Team' : 'Create Your Team'}
-            </button>
-          )}
-
-          {/* Column header */}
-          <div className="ld-members-header">
-            <span>Member</span>
-            <span>Points</span>
-          </div>
-
-          {/* Members list */}
-          {membersWithTeams.map((m, idx) => {
-            const isMe = m.id === user?.id;
-            const hasTeam = !!m.team;
-            return (
-              <div
-                key={m.id}
-                className={`ld-member-row ${hasTeam ? 'clickable' : ''} ${isMe ? 'is-me' : ''}`}
-                onClick={() => handleMemberClick(m)}
+        <>
+          <div className="tabs ld-subtabs">
+            {['live', 'upcoming', 'completed'].map(tab => (
+              <button
+                key={tab}
+                className={`tab ${matchSubTab === tab ? 'active' : ''}`}
+                onClick={() => setMatchSubTab(tab)}
               >
-                <div className="ld-member-left">
-                  <div className="ld-member-rank">{idx + 1}</div>
-                  <div className="avatar" style={{ background: m.avatar_color }}>
-                    {m.name[0].toUpperCase()}
-                  </div>
-                  <div className="ld-member-info">
-                    <div className="ld-member-name">
-                      {m.name}
-                      {isMe && <span className="ld-you-tag">You</span>}
-                    </div>
-                    <div className="ld-member-status">
-                      {hasTeam ? (
-                        <span className="ld-has-team">Team created</span>
-                      ) : (
-                        <span className="ld-no-team">No team yet</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                <div className="ld-member-right">
-                  {hasTeam ? (
-                    <span className="ld-member-points">{m.team.total_points || 0}</span>
-                  ) : (
-                    <span className="ld-member-points ld-pts-none">—</span>
-                  )}
-                  {hasTeam && (
-                    <svg className="ld-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
-                  )}
-                </div>
+                {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                {matchTabCounts[tab] > 0 && <span className="tab-badge">{matchTabCounts[tab]}</span>}
+              </button>
+            ))}
+          </div>
+          {filteredMatches.length === 0 ? (
+            <div className="empty">
+              <div className="empty-icon">🏏</div>
+              <p className="empty-text">No {matchSubTab} matches</p>
+            </div>
+          ) : (
+            filteredMatches.map(m => (
+              <MatchCard key={m.id} match={m} leagueId={id}
+                hasTeam={teams.some(t => t.user_id === user?.id && t.match_id === m.id)} />
+            ))
+          )}
+        </>
+      ) : (
+        <>
+          {!scoresLoaded ? (
+            <div style={{ display: 'flex', justifyContent: 'center', padding: 32 }}><div className="spinner" /></div>
+          ) : (
+            <>
+              <div className="ld-members-header">
+                <span>Member</span>
+                <span>Points</span>
               </div>
-            );
-          })}
-        </div>
+              {overallScores.map((member, idx) => {
+                const isMe = member.id === user?.id;
+                const matchesPlayed = scores.filter(s => s.user_id === member.id).length;
+                return (
+                  <div
+                    key={member.id}
+                    className={`ld-member-row clickable ${isMe ? 'is-me' : ''}`}
+                    onClick={() => navigate(`/leagues/${id}/breakdown/${member.id}`, { state: { userName: member.name } })}
+                  >
+                    <div className="ld-member-left">
+                      <div className="ld-member-rank">{idx + 1}</div>
+                      <div className="avatar" style={{ background: member.avatar_color }}>
+                        {member.name[0].toUpperCase()}
+                      </div>
+                      <div className="ld-member-info">
+                        <div className="ld-member-name">
+                          {member.name}
+                          {isMe && <span className="ld-you-tag">You</span>}
+                        </div>
+                        <div className="ld-member-status">
+                          <span style={{ color: 'var(--text-muted)' }}>
+                            {matchesPlayed} match{matchesPlayed !== 1 ? 'es' : ''} played
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="ld-member-right">
+                      <span className="ld-member-points">{member.total_points}</span>
+                      <svg className="ld-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+                    </div>
+                  </div>
+                );
+              })}
+            </>
+          )}
+        </>
       )}
     </div>
   );

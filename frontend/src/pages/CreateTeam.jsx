@@ -246,38 +246,90 @@ export default function CreateTeam() {
 
   if (showPayment) {
     return (
-      <div className="create-team-page" style={{ justifyContent: 'center', alignItems: 'center', padding: 32 }}>
-        <div style={{ textAlign: 'center', maxWidth: 320, width: '100%' }}>
-          <div style={{ fontSize: 52, marginBottom: 16 }}>🏏</div>
-          <h2 style={{ color: 'var(--text-primary)', margin: '0 0 8px', fontSize: 22 }}>Season Pass</h2>
-          <p style={{ color: 'var(--text-muted)', margin: '0 0 28px', lineHeight: 1.6, fontSize: 14 }}>
-            Your first match was free! Get the season pass for<br />unlimited entries for the rest of the season.
+      <div className="create-team-page" style={{ justifyContent: 'center', alignItems: 'center', padding: '24px 20px' }}>
+        <div style={{ textAlign: 'center', maxWidth: 340, width: '100%' }}>
+
+          {/* Progress nudge */}
+          <div style={{
+            background: 'linear-gradient(135deg, #7c3aed22, #a855f722)',
+            border: '1px solid #7c3aed44',
+            borderRadius: 12,
+            padding: '10px 16px',
+            marginBottom: 24,
+            fontSize: 13,
+            color: 'var(--accent)',
+            fontWeight: 600,
+          }}>
+            Your team is ready — one last step
+          </div>
+
+          {/* Hero */}
+          <h2 style={{ color: 'var(--text-primary)', margin: '0 0 6px', fontSize: 22, fontWeight: 700 }}>
+            Unlock the Full Season
+          </h2>
+          <p style={{ color: 'var(--text-muted)', margin: '0 0 20px', lineHeight: 1.6, fontSize: 14 }}>
+            You've played your free match. Serious players go all season — don't let your rivals pull ahead.
           </p>
+
+          {/* Price card */}
           <div style={{
             background: 'var(--bg-elevated)',
-            borderRadius: 14,
+            borderRadius: 16,
             padding: '20px 24px',
-            marginBottom: 24,
-            border: '1px solid var(--border)',
+            marginBottom: 16,
+            border: '2px solid var(--accent)',
+            position: 'relative',
           }}>
-            <div style={{ fontSize: 40, fontWeight: 700, color: 'var(--accent)', lineHeight: 1 }}>₹75</div>
-            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6 }}>one-time · entire season · multiple leagues</div>
+            <div style={{
+              position: 'absolute', top: -12, left: '50%', transform: 'translateX(-50%)',
+              background: 'var(--accent)', color: '#fff', fontSize: 11, fontWeight: 700,
+              padding: '3px 14px', borderRadius: 20, letterSpacing: 0.5,
+            }}>BEST VALUE</div>
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 8, marginBottom: 4 }}>
+              <span style={{ fontSize: 17, color: '#e53935', textDecoration: 'line-through', fontWeight: 600, opacity: 0.85 }}>₹150</span>
+              <span style={{ fontSize: 28, fontWeight: 800, color: 'var(--accent)', lineHeight: 1 }}>₹75</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: 4 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: '#16a34a', background: '#dcfce7', padding: '2px 10px', borderRadius: 20, letterSpacing: 0.5 }}>FIRSTSEASON applied</span>
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 16 }}>one-time payment · valid till 20 Apr 2026</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, textAlign: 'left' }}>
+              {[
+                'Unlimited team entries all season',
+                'Compete across multiple leagues',
+                'Full leaderboard & rankings',
+                'Private leagues with friends',
+              ].map(item => (
+                <div key={item} style={{ fontSize: 13, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ color: 'var(--accent)', fontWeight: 700, fontSize: 16 }}>·</span> {item}
+                </div>
+              ))}
+            </div>
           </div>
+
+          {/* Social proof */}
+          <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 20 }}>
+            Your first match was free — ₹75 unlocks the full season
+          </div>
+
           <button
             className="btn btn-primary"
-            style={{ width: '100%', marginBottom: 12, height: 48, fontSize: 15 }}
+            style={{ width: '100%', marginBottom: 10, height: 52, fontSize: 16, fontWeight: 700, borderRadius: 14 }}
             disabled={paymentLoading}
             onClick={handlePayment}
           >
-            {paymentLoading ? 'Opening payment...' : 'PAY ₹75 & CONTINUE'}
+            {paymentLoading ? 'Opening payment...' : 'Pay ₹75 & Join Season'}
           </button>
           <button
             className="btn"
-            style={{ width: '100%', color: 'var(--text-muted)', height: 44 }}
+            style={{ width: '100%', color: 'var(--text-muted)', height: 44, fontSize: 13 }}
             onClick={() => navigate(-1)}
           >
-            GO BACK
+            Maybe later
           </button>
+          <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 12, opacity: 0.7 }}>
+            Secured payment via Razorpay · UPI, Cards, NetBanking accepted
+          </p>
         </div>
       </div>
     );
@@ -346,8 +398,9 @@ export default function CreateTeam() {
       <div className="d11-slots">
         {Array.from({ length: 11 }).map((_, i) => (
           <div key={i} className={`d11-slot ${i < selected.length ? 'd11-slot-filled' : ''}`}>
-            {i === selected.length - 1 && <span className="d11-slot-num">{selected.length}</span>}
-            {i === 10 && <span className="d11-slot-num">11</span>}
+            {i === selected.length - 1
+              ? <span className="d11-slot-num">{selected.length}</span>
+              : i === 10 ? <span className="d11-slot-num">11</span> : null}
           </div>
         ))}
       </div>
@@ -501,7 +554,7 @@ export default function CreateTeam() {
             sessionStorage.setItem('allPlayers', JSON.stringify(players));
             if (existingCaptainId) sessionStorage.setItem('existingCaptainId', existingCaptainId);
             if (existingVcId) sessionStorage.setItem('existingVcId', existingVcId);
-            navigate(`/backup-select/${matchId}/${leagueId}`);
+            navigate(`/captain-select/${matchId}/${leagueId}`);
           }}>
           NEXT →
         </button>
