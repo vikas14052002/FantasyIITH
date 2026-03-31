@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { getUser } from './lib/auth';
 import Header from './components/Header';
 import BottomNav from './components/BottomNav';
+import UpdatePrompt from './components/UpdatePrompt';
 
 // Lazy load all pages
 const Login = lazy(() => import('./pages/Login'));
@@ -50,6 +51,7 @@ function PageLoader() {
 export default function App() {
   return (
     <BrowserRouter>
+      <UpdatePrompt />
       <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route path="/login" element={<Login />} />
