@@ -1,25 +1,28 @@
 import { useState, useEffect } from 'react';
 
-const CHECK_INTERVAL = 60000; // check every 60s
+const CHECK_INTERVAL = 120000; // check every 2 min
 
 export default function UpdatePrompt() {
   const [updateAvailable, setUpdateAvailable] = useState(false);
 
   useEffect(() => {
-    // Store the current script hash on mount
-    const currentScripts = getScriptHashes();
+    // Get the main entry JS filename hash from current page
+    const currentHash = getCurrentBuildHash();
+    if (!currentHash) return;
 
     const interval = setInterval(async () => {
       try {
-        const res = await fetch(window.location.origin + '/', { cache: 'no-store' });
+        const res = await fetch('/?_check=' + Date.now(), {
+          cache: 'no-store',
+          headers: { 'Accept': 'text/html' },
+        });
         const html = await res.text();
-        // Extract script src hashes from fresh HTML
-        const freshScripts = getScriptHashesFromHTML(html);
-        if (freshScripts.length > 0 && currentScripts.length > 0) {
-          const changed = freshScripts.some(s => !currentScripts.includes(s));
-          if (changed) setUpdateAvailable(true);
+        const freshHash = getBuildHashFromHTML(html);
+        if (freshHash && freshHash !== currentHash) {
+          setUpdateAvailable(true);
+          clearInterval(interval);
         }
-      } catch { /* ignore network errors */ }
+      } catch { /* ignore */ }
     }, CHECK_INTERVAL);
 
     return () => clearInterval(interval);
@@ -37,13 +40,17 @@ export default function UpdatePrompt() {
   );
 }
 
-function getScriptHashes() {
-  return Array.from(document.querySelectorAll('script[src]'))
-    .map(s => s.src)
-    .filter(s => s.includes('/assets/'));
+// Extract the hash from the main index JS file (e.g. "index-DqqousuV" → "DqqousuV")
+function getCurrentBuildHash() {
+  const scripts = Array.from(document.querySelectorAll('script[src]'));
+  for (const s of scripts) {
+    const match = s.src.match(/\/assets\/index-([a-zA-Z0-9_-]+)\.js/);
+    if (match) return match[1];
+  }
+  return null;
 }
 
-function getScriptHashesFromHTML(html) {
-  const matches = html.match(/\/assets\/[^"']+\.js/g);
-  return matches || [];
+function getBuildHashFromHTML(html) {
+  const match = html.match(/\/assets\/index-([a-zA-Z0-9_-]+)\.js/);
+  return match ? match[1] : null;
 }
