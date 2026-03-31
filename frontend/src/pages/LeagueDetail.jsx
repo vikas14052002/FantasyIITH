@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { getUser } from '../lib/auth';
 import { hasMatchStarted } from '../lib/matchLock';
 import MatchCard from '../components/MatchCard';
+import ShareSheet from '../components/ShareSheet';
 import './LeagueDetail.css';
 
 export default function LeagueDetail() {
@@ -15,6 +16,7 @@ export default function LeagueDetail() {
   const [selectedMatchId, setSelectedMatchId] = useState(null);
   const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showShare, setShowShare] = useState(false);
   const navigate = useNavigate();
   const user = getUser();
 
@@ -79,13 +81,8 @@ export default function LeagueDetail() {
     });
   }, [members, teams, selectedMatchId]);
 
-  const handleShare = async () => {
-    if (navigator.share) {
-      await navigator.share({ title: 'Join my Fantasy League!', text: `Join "${league.name}" on FantasyIITH! Code: ${league.invite_code}` });
-    } else {
-      navigator.clipboard.writeText(league.invite_code);
-      alert('Code copied!');
-    }
+  const handleShare = () => {
+    setShowShare(true);
   };
 
   function handleMemberClick(member) {
@@ -103,6 +100,13 @@ export default function LeagueDetail() {
 
   return (
     <div className="page fade-in">
+      {showShare && (
+        <ShareSheet
+          title="Join my Fantasy League!"
+          text={`Join "${league.name}" on PlayXI! Code: ${league.invite_code}`}
+          onClose={() => setShowShare(false)}
+        />
+      )}
       <div className="card" style={{ marginBottom: 16, textAlign: 'center' }}>
         <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>{league.name}</h2>
         <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 12 }}>

@@ -24,6 +24,18 @@
   --nav-height: 56px;
 }
 
+:root[data-theme="light"] {
+  --bg-primary: #F5F5F5;
+  --bg-surface: #FFFFFF;
+  --bg-elevated: #E8E8E8;
+  --bg-modal: #F0F0F0;
+  --text-primary: #1A1A2E;
+  --text-secondary: #666666;
+  --text-muted: #999999;
+  --border: rgba(0, 0, 0, 0.1);
+  --shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 html, body, #root { height: 100%; width: 100%; }

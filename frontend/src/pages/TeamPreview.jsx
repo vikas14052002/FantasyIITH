@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { getUser } from '../lib/auth';
 import { hasMatchStarted } from '../lib/matchLock';
+import ShareSheet from '../components/ShareSheet';
 import './TeamPreview.css';
 
 const ROLE_ORDER = { WK: 0, BAT: 1, AR: 2, BOWL: 3 };
@@ -15,6 +16,7 @@ export default function TeamPreview() {
   const [dreamIds, setDreamIds] = useState(new Set());
   const [loading, setLoading] = useState(true);
   const [showBench, setShowBench] = useState(false);
+  const [showShare, setShowShare] = useState(false);
   const navigate = useNavigate();
   const user = getUser();
 
@@ -251,6 +253,15 @@ export default function TeamPreview() {
         </>
       )}
 
+      {/* Share sheet */}
+      {showShare && (
+        <ShareSheet
+          title="Share Team"
+          text={`Check out my PlayXI team for ${team1} vs ${team2}! ${team.total_points > 0 ? `Score: ${team.total_points} pts` : ''}`}
+          onClose={() => setShowShare(false)}
+        />
+      )}
+
       {/* Fixed bottom actions */}
       <div className="preview-bottom">
         {isMyTeam && !matchStarted && (
@@ -258,6 +269,9 @@ export default function TeamPreview() {
             EDIT TEAM
           </button>
         )}
+        <button className="btn btn-outline" style={{ flex: 0, minWidth: 48, padding: '12px' }} onClick={() => setShowShare(true)} title="Share Team">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+        </button>
         <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => navigate(`/leagues/${team.league_id}`)}>
           {matchStarted ? 'BACK' : 'CONTINUE'}
         </button>

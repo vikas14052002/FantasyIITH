@@ -1,0 +1,99 @@
+/* Share overlay */
+.share-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 200;
+  animation: fadeInOverlay 0.2s ease;
+}
+
+/* Share sheet panel — same slide-up as bench slider */
+.share-sheet {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 480px;
+  background: var(--bg-surface);
+  border-radius: 16px 16px 0 0;
+  z-index: 201;
+  animation: slideUp 0.3s ease;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.share-sheet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.share-sheet-title {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.share-sheet-close {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+}
+
+.share-sheet-options {
+  display: flex;
+  justify-content: center;
+  gap: 32px;
+  padding: 24px 16px 28px;
+}
+
+.share-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: 'Poppins', sans-serif;
+}
+
+.share-option:active .share-option-icon {
+  transform: scale(0.92);
+}
+
+.share-option-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s;
+}
+
+.share-icon-whatsapp {
+  background: #25D366;
+}
+
+.share-icon-telegram {
+  background: #0088CC;
+}
+
+.share-icon-copy {
+  background: var(--bg-elevated);
+}
+
+.share-icon-copied {
+  background: var(--green);
+}
+
+.share-option-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}

@@ -1,9 +1,15 @@
 import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { getUser } from './lib/auth';
+import { initTheme } from './lib/theme';
 import Header from './components/Header';
 import BottomNav from './components/BottomNav';
 import UpdatePrompt from './components/UpdatePrompt';
+import ErrorBoundary from './components/ErrorBoundary';
+import OfflineBanner from './components/OfflineBanner';
+
+// Apply saved theme on load
+initTheme();
 
 // Lazy load all pages
 const Login = lazy(() => import('./pages/Login'));
@@ -51,7 +57,9 @@ function PageLoader() {
 export default function App() {
   return (
     <BrowserRouter>
+      <OfflineBanner />
       <UpdatePrompt />
+      <ErrorBoundary>
       <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route path="/login" element={<Login />} />
@@ -74,6 +82,7 @@ export default function App() {
           <Route path="*" element={<Navigate to="/home" replace />} />
         </Routes>
       </Suspense>
+      </ErrorBoundary>
     </BrowserRouter>
   );
 }
