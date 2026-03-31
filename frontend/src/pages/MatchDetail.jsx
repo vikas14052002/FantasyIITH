@@ -396,7 +396,21 @@ function ScorecardSection({ batsmen, bowlers, score, teamName, onPlayerClick }) 
   return (<div>
     <div className="md-sc-header"><span>{teamName} Batting</span>{score&&<span className="md-sc-score">{score}</span>}</div>
     <div className="md-sc-cols"><span style={{flex:1}}>Batter</span><span>R</span><span>B</span><span>4s</span><span>6s</span><span>SR</span></div>
-    {batsmen.length===0?<div style={{padding:12,textAlign:'center',color:'var(--text-muted)',fontSize:12}}>Yet to bat</div>:batsmen.map(p=><div key={p.player_id} className="md-sc-row" style={{cursor:'pointer'}} onClick={()=>onPlayerClick&&onPlayerClick(p)}><div className="md-sc-player">{p.image_url?<img src={p.image_url} alt="" className="md-sc-img"/>:<div className="avatar" style={{width:26,height:26,fontSize:9,background:'var(--bg-elevated)'}}>{p.name.split(' ').map(n=>n[0]).join('').slice(0,2)}</div>}<span className="md-sc-name">{p.name.split(' ').pop()}</span></div><span className="md-sc-val bold">{p.runs}</span><span className="md-sc-val">{p.balls}</span><span className="md-sc-val">{p.fours}</span><span className="md-sc-val">{p.sixes}</span><span className="md-sc-val">{p.balls>0?((p.runs/p.balls)*100).toFixed(1):'-'}</span></div>)}
+    {batsmen.length===0?<div style={{padding:12,textAlign:'center',color:'var(--text-muted)',fontSize:12}}>Yet to bat</div>:batsmen.map(p=>{
+      const isNotOut = !p.dismissal || p.dismissal === 'not out' || p.dismissal === 'batting' || p.dismissal === '';
+      return (<div key={p.player_id} className="md-sc-row md-sc-bat-row" style={{cursor:'pointer'}} onClick={()=>onPlayerClick&&onPlayerClick(p)}>
+        <div className="md-sc-player">
+          {p.image_url?<img src={p.image_url} alt="" className="md-sc-img"/>:<div className="avatar" style={{width:26,height:26,fontSize:9,background:'var(--bg-elevated)'}}>{p.name.split(' ').map(n=>n[0]).join('').slice(0,2)}</div>}
+          <div className="md-sc-bat-info">
+            <span className="md-sc-name">{p.name.split(' ').pop()}{isNotOut && <span className="md-sc-notout">*</span>}</span>
+            <span className="md-sc-dismissal">{isNotOut ? 'not out' : p.dismissal}</span>
+          </div>
+        </div>
+        <span className="md-sc-val bold">{p.runs}{isNotOut && <span className="md-sc-notout">*</span>}</span>
+        <span className="md-sc-val">{p.balls}</span><span className="md-sc-val">{p.fours}</span><span className="md-sc-val">{p.sixes}</span>
+        <span className="md-sc-val">{p.balls>0?((p.runs/p.balls)*100).toFixed(1):'-'}</span>
+      </div>);
+    })}
     {bowlers.length>0&&<><div className="md-sc-cols" style={{marginTop:16}}><span style={{flex:1}}>Bowler</span><span>O</span><span>M</span><span>R</span><span>W</span><span>Econ</span></div>{bowlers.map(p=><div key={p.player_id} className="md-sc-row" style={{cursor:'pointer'}} onClick={()=>onPlayerClick&&onPlayerClick(p)}><div className="md-sc-player">{p.image_url?<img src={p.image_url} alt="" className="md-sc-img"/>:<div className="avatar" style={{width:26,height:26,fontSize:9,background:'var(--bg-elevated)'}}>{p.name.split(' ').map(n=>n[0]).join('').slice(0,2)}</div>}<span className="md-sc-name">{p.name.split(' ').pop()}</span></div><span className="md-sc-val">{p.overs_bowled}</span><span className="md-sc-val">{p.maidens}</span><span className="md-sc-val">{p.runs_conceded}</span><span className={`md-sc-val ${p.wickets>0?'bold green':''}`}>{p.wickets}</span><span className="md-sc-val">{p.overs_bowled>0?(p.runs_conceded/p.overs_bowled).toFixed(1):'-'}</span></div>)}</>}
   </div>);
 }

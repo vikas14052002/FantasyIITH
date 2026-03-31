@@ -627,6 +627,41 @@
   color: var(--green);
 }
 
+/* ── Batsman dismissal ── */
+.md-sc-bat-row {
+  align-items: flex-start;
+  padding: 10px 0;
+}
+
+.md-sc-bat-row .md-sc-player {
+  align-items: flex-start;
+}
+
+.md-sc-bat-row .md-sc-val {
+  padding-top: 2px;
+}
+
+.md-sc-bat-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.md-sc-dismissal {
+  font-size: 9px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 140px;
+}
+
+.md-sc-notout {
+  color: var(--green);
+  font-weight: 800;
+  margin-left: 1px;
+}
+
 .md-bench-divider {
   display: flex;
   align-items: center;
