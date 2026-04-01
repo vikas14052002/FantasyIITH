@@ -2,9 +2,9 @@ const THEME_KEY = 'playxi-theme';
 
 export function getTheme() {
   try {
-    return localStorage.getItem(THEME_KEY) || 'dark';
+    return localStorage.getItem(THEME_KEY) || 'light';
   } catch {
-    return 'dark';
+    return 'light';
   }
 }
 
