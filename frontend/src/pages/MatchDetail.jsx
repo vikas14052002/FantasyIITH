@@ -5,6 +5,7 @@ import { getUser } from '../lib/auth';
 import { getTeamLogo } from '../lib/teamLogos';
 import { hasMatchStarted } from '../lib/matchLock';
 import AnimatedNumber from '../components/AnimatedNumber';
+import { MatchDetailSkeleton } from '../components/Skeleton';
 import './MatchDetail.css';
 import './TeamCompare.css';
 
@@ -214,11 +215,14 @@ export default function MatchDetail() {
   function enrich(tp) { const base = tp.fantasy_points || 0; const mult = tp.is_captain ? 2 : tp.is_vice_captain ? 1.5 : 1; return { ...tp, total_points: base * mult }; }
   function getLabel(p) { if (!p) return null; return p.is_captain ? 'C' : p.is_vice_captain ? 'VC' : null; }
 
-  if (loading) return <div className="loader"><div className="spinner" /></div>;
+  if (loading) return <MatchDetailSkeleton />;
   if (!match) return <div className="page"><p>Match not found</p></div>;
 
   return (
     <div className="page fade-in">
+      <button onClick={() => navigate(-1)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: 13, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 4, marginBottom: 12, padding: 0, fontFamily: 'Poppins, sans-serif', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>
+        <span>&larr;</span> <span>{match.team1_short} vs {match.team2_short}</span>
+      </button>
       <div className="card" style={{ textAlign: 'center', marginBottom: 12 }}>
         <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 8 }}>Match {match.match_number} • {match.venue || 'PlayXI'}</div>
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 12 }}>

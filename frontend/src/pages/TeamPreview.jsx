@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { getUser } from '../lib/auth';
 import { hasMatchStarted } from '../lib/matchLock';
 import ShareSheet from '../components/ShareSheet';
+import { MatchDetailSkeleton } from '../components/Skeleton';
 import './TeamPreview.css';
 
 const ROLE_ORDER = { WK: 0, BAT: 1, AR: 2, BOWL: 3 };
@@ -69,7 +70,7 @@ export default function TeamPreview() {
     return p?.fantasy_points || 0;
   }
 
-  if (loading) return <div className="loader"><div className="spinner" /></div>;
+  if (loading) return <MatchDetailSkeleton />;
   if (!team) return <div className="page"><p>Team not found</p></div>;
 
   const isMyTeam = team.user_id === user?.id;

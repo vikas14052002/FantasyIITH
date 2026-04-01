@@ -8,6 +8,7 @@ import BottomNav from './components/BottomNav';
 import UpdatePrompt from './components/UpdatePrompt';
 import ErrorBoundary from './components/ErrorBoundary';
 import OfflineBanner from './components/OfflineBanner';
+import { PageLoaderSkeleton } from './components/Skeleton';
 
 // Apply saved theme on load
 initTheme();
@@ -45,11 +46,7 @@ function AppShell({ children }) {
 }
 
 function PageLoader() {
-  return (
-    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
-      <div className="spinner" />
-    </div>
-  );
+  return <PageLoaderSkeleton />;
 }
 
 export default function App() {

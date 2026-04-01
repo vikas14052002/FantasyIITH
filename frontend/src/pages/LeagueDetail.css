@@ -69,6 +69,7 @@
   padding: 12px 0;
   border-bottom: 1px solid var(--border);
   transition: background 0.15s;
+  min-height: 44px;
 }
 
 .ld-member-row.clickable {

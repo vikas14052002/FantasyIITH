@@ -65,16 +65,34 @@
   justify-content: center;
 }
 
+@keyframes captainPulse {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.5); }
+  50% { transform: scale(1.12); box-shadow: 0 0 0 6px rgba(255, 193, 7, 0); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 193, 7, 0); }
+}
+
+@keyframes vcPulse {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(33, 150, 243, 0.5); }
+  50% { transform: scale(1.12); box-shadow: 0 0 0 6px rgba(33, 150, 243, 0); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(33, 150, 243, 0); }
+}
+
 .captain-btn.captain-active {
   background: var(--gold);
   border-color: var(--gold);
   color: #000;
+  animation: captainPulse 0.4s ease-out;
 }
 
 .captain-btn.vc-active {
   background: var(--blue);
   border-color: var(--blue);
   color: white;
+  animation: vcPulse 0.4s ease-out;
+}
+
+.captain-row {
+  min-height: 44px;
 }
 
 /* Stepper */

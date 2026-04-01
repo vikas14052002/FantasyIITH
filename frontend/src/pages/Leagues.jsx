@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { getUser } from '../lib/auth';
+import { LeaguesSkeleton } from '../components/Skeleton';
 
 export default function Leagues() {
   const [leagues, setLeagues] = useState([]);
@@ -20,7 +21,7 @@ export default function Leagues() {
     setLoading(false);
   }
 
-  if (loading) return <div className="loader"><div className="spinner" /></div>;
+  if (loading) return <LeaguesSkeleton />;
 
   return (
     <div className="page fade-in">

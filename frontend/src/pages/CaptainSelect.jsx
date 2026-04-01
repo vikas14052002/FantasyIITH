@@ -180,7 +180,12 @@ export default function CaptainSelect() {
   return (
     <div className="captain-page">
       <div className="ct-header">
-        <button className="ct-back" onClick={() => navigate(-1)}>←</button>
+        <button className="ct-back" onClick={() => navigate(-1)}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span>←</span>
+            <span style={{ fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 60 }}>Back</span>
+          </span>
+        </button>
         <div className="ct-header-info">
           <span className="ct-match-label">Choose Captain & Vice Captain</span>
         </div>

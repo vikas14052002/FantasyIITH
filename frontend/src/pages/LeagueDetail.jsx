@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { getUser } from '../lib/auth';
 import MatchCard from '../components/MatchCard';
 import ShareSheet from '../components/ShareSheet';
+import { LeagueDetailSkeleton, SkeletonRow } from '../components/Skeleton';
 import './LeagueDetail.css';
 
 export default function LeagueDetail() {
@@ -82,7 +83,7 @@ export default function LeagueDetail() {
       .sort((a, b) => b.total_points - a.total_points);
   }, [members, scores]);
 
-  if (loading) return <div className="loader"><div className="spinner" /></div>;
+  if (loading) return <LeagueDetailSkeleton />;
   if (!league) return <div className="page"><p>League not found</p></div>;
 
   return (
@@ -94,6 +95,10 @@ export default function LeagueDetail() {
           onClose={() => setShowShare(false)}
         />
       )}
+
+      <button onClick={() => navigate('/leagues')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: 13, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 4, marginBottom: 12, padding: 0, fontFamily: 'Poppins, sans-serif', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>
+        <span>&larr;</span> <span>Leagues</span>
+      </button>
 
       <div className="card" style={{ marginBottom: 16, textAlign: 'center' }}>
         <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>{league.name}</h2>
@@ -144,7 +149,10 @@ export default function LeagueDetail() {
       ) : (
         <>
           {!scoresLoaded ? (
-            <div style={{ display: 'flex', justifyContent: 'center', padding: 32 }}><div className="spinner" /></div>
+            <div role="status" aria-live="polite" aria-label="Loading leaderboard">
+              <span className="sr-only">Loading leaderboard...</span>
+              <SkeletonRow /><SkeletonRow /><SkeletonRow /><SkeletonRow />
+            </div>
           ) : (
             <>
               <div className="ld-members-header">

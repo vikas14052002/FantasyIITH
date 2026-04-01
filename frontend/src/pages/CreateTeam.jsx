@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { getUser } from '../lib/auth';
 import { hasMatchStarted } from '../lib/matchLock';
 import { TEAM_COLORS, getTeamLogo } from '../lib/teamLogos';
+import { MatchDetailSkeleton } from '../components/Skeleton';
 import './CreateTeam.css';
 
 const ROLES = ['WK', 'BAT', 'AR', 'BOWL'];
@@ -12,9 +13,8 @@ const ROLE_LIMITS = { WK: { min: 1, max: 4 }, BAT: { min: 3, max: 6 }, AR: { min
 const MAX_CREDITS = 100;
 const MAX_PER_TEAM = 7;
 
-// sortKey: 'points' | 'credits', sortDir: 'asc' | 'desc'
-// Playing XI always float to top
-function sortPlayers(players, sortKey, sortDir) {
+// Sort: Playing XI → others. Within each group, by selection % then credits/points
+function sortPlayers(players, sortKey, sortDir, pctMap) {
   const sorted = [...players];
   const dir = sortDir === 'asc' ? 1 : -1;
   sorted.sort((a, b) => {
@@ -23,6 +23,9 @@ function sortPlayers(players, sortKey, sortDir) {
     const bPlaying = b.is_playing ? 1 : 0;
     if (aPlaying !== bPlaying) return bPlaying - aPlaying;
     // Then by sort key
+    if (sortKey === 'selection') {
+      return (pctMap[b.player_id] || 0) - (pctMap[a.player_id] || 0);
+    }
     if (sortKey === 'points') {
       return dir * ((a.fantasy_points || 0) - (b.fantasy_points || 0));
     }
@@ -48,6 +51,9 @@ export default function CreateTeam() {
   const [showPreview, setShowPreview] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
   const [paymentLoading, setPaymentLoading] = useState(false);
+  const [flashId, setFlashId] = useState(null);
+  const [flashType, setFlashType] = useState(null);
+  const [selectionPct, setSelectionPct] = useState({});
   const navigate = useNavigate();
   const listRef = useRef(null);
   const user = getUser();
@@ -62,6 +68,14 @@ export default function CreateTeam() {
     setMatch(matchRes.data);
     const allPlayers = playersRes.data || [];
     setPlayers(allPlayers);
+
+    // Fetch selection percentages
+    const { data: pctData } = await supabase.rpc('get_player_selection_pct', { p_match_id: matchId });
+    if (pctData) {
+      const pctMap = {};
+      pctData.forEach(p => { pctMap[p.player_id] = p.pct; });
+      setSelectionPct(pctMap);
+    }
 
     // Check if user already has a team for this match+league — pre-fill selection
     if (user) {
@@ -217,9 +231,14 @@ export default function CreateTeam() {
     const isSelected = selected.find(p => p.player_id === player.player_id);
     if (isSelected) {
       setSelected(selected.filter(p => p.player_id !== player.player_id));
+      setFlashId(player.player_id);
+      setFlashType('deselect');
     } else if (canSelect(player)) {
       setSelected([...selected, player]);
+      setFlashId(player.player_id);
+      setFlashType('select');
     }
+    setTimeout(() => { setFlashId(null); setFlashType(null); }, 400);
   }
 
   function removePlayer(player) {
@@ -236,8 +255,13 @@ export default function CreateTeam() {
       const q = search.toLowerCase().trim();
       list = list.filter(p => p.name.toLowerCase().includes(q));
     }
-    return sortPlayers(list, sortKey, sortDir);
-  }, [players, activeRole, search, sortKey, sortDir]);
+    return sortPlayers(list, sortKey, sortDir, selectionPct);
+  }, [players, activeRole, search, sortKey, sortDir, selectionPct]);
+
+  // Check if any player has is_playing set (squad announced)
+  const squadAnnounced = useMemo(() => players.some(p => p.is_playing), [players]);
+  const playingXI = useMemo(() => filteredPlayers.filter(p => p.is_playing), [filteredPlayers]);
+  const notInXI = useMemo(() => filteredPlayers.filter(p => !p.is_playing), [filteredPlayers]);
 
   const lineupsSynced = match?.lineups_synced;
   const playingXI = lineupsSynced ? filteredPlayers.filter(p => p.is_playing && !p.is_impact_sub) : [];
@@ -290,7 +314,7 @@ export default function CreateTeam() {
   // Check which roles are valid (met minimum)
   const allRolesValid = ROLES.every(r => roleCounts[r] >= ROLE_LIMITS[r].min);
 
-  if (loading) return <div className="loader"><div className="spinner" /></div>;
+  if (loading) return <MatchDetailSkeleton />;
 
   if (showPayment) {
     return (
@@ -406,7 +430,10 @@ export default function CreateTeam() {
       {/* Header */}
       <div className="ct-header">
         <button className="ct-back" onClick={() => navigate(-1)}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+            <span style={{ fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 60 }}>Back</span>
+          </span>
         </button>
         <div className="ct-header-info">
           <span className="ct-match-label">{isEditing ? 'Edit Team' : 'Create Team'}</span>
@@ -529,12 +556,15 @@ export default function CreateTeam() {
         <div className="ct-list-header">
           <span>Player</span>
           <div className="ct-list-header-right">
+            <button className={`ct-col-sort ${sortKey === 'selection' ? 'active' : ''}`} onClick={() => { setSortKey('selection'); setSortDir('desc'); }}>
+              Sel%
+            </button>
             <button className={`ct-col-sort ${sortKey === 'points' ? 'active' : ''}`} onClick={() => toggleSort('points')}>
-              Points
+              Pts
               <svg className={`ct-sort-arrow ${sortKey === 'points' ? (sortDir === 'asc' ? 'asc' : 'desc') : ''}`} width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
             </button>
             <button className={`ct-col-sort ${sortKey === 'credits' ? 'active' : ''}`} onClick={() => toggleSort('credits')}>
-              Credits
+              Cr
               <svg className={`ct-sort-arrow ${sortKey === 'credits' ? (sortDir === 'asc' ? 'asc' : 'desc') : ''}`} width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
             </button>
             <span style={{ width: 32 }}></span>
@@ -648,6 +678,49 @@ export default function CreateTeam() {
       )}
     </div>
   );
+
+  function PlayerRow({ player, dimmed }) {
+    const isSelected = selected.find(p => p.player_id === player.player_id);
+    const disabled = !isSelected && !canSelect(player);
+    const pct = selectionPct[player.player_id];
+    const pctColor = pct >= 70 ? 'ct-pct-high' : pct >= 40 ? 'ct-pct-mid' : 'ct-pct-low';
+    return (
+      <div
+        className={`ct-player-row ${isSelected ? 'selected' : ''} ${disabled ? 'disabled' : ''} ${player.is_playing ? 'playing' : ''} ${dimmed ? 'ct-dimmed' : ''} ${flashId === player.player_id ? (flashType === 'select' ? 'flash-select' : 'flash-deselect') : ''}`}
+        onClick={() => !disabled || isSelected ? togglePlayer(player) : null}>
+        <div className="ct-player-left">
+          {player.image_url ? (
+            <img className="ct-player-img" src={player.image_url} alt={player.name}
+              style={{ borderColor: isSelected ? 'var(--green)' : player.is_playing ? 'var(--green)' : 'var(--border)' }} />
+          ) : (
+            <div className={`ct-player-avatar ${player.is_playing ? 'playing-xi' : ''}`}
+              style={{ background: isSelected ? 'var(--green)' : 'var(--bg-elevated)' }}>
+              {player.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+            </div>
+          )}
+          <div className="player-info" onClick={(e) => { e.stopPropagation(); setStatsPlayer(player); }}>
+            <div className="player-name">{player.name} <svg className="ct-info-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg></div>
+            <div className="player-meta">
+              <span className="team-tag">{player.team}</span>
+              {player.is_playing && <span className="ct-playing-tag">Playing XI</span>}
+            </div>
+          </div>
+        </div>
+        <div className="ct-player-right">
+          {pct != null && <span className={`ct-pct-badge ${pctColor}`}>{pct}%</span>}
+          <span className="ct-player-points">{player.fantasy_points || '-'}</span>
+          <span className="player-credits">{player.credits}</span>
+          <div className={`ct-select-btn ${isSelected ? 'active' : ''}`}>
+            {isSelected ? (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            ) : (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   function getDisabledReason(player) {
     if (selected.length >= 11) return 'Team is full (11/11)';
