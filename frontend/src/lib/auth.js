@@ -1,50 +1,50 @@
 import { supabase } from './supabase';
 
-const AVATAR_COLORS = [
-  '#D91E36', '#0698A7', '#4CAF50', '#FFC107', '#2196F3',
-  '#E91E63', '#9C27B0', '#FF5722', '#00BCD4', '#8BC34A',
-];
-
 export async function loginWithName(name, password) {
   const trimmed = name.trim().toLowerCase();
   if (!trimmed) throw new Error('Name is required');
   if (!password) throw new Error('Password is required');
 
-  // Try to find existing user
-  let { data: user } = await supabase
+  // Check if user exists
+  const { data: exists } = await supabase
     .from('users')
-    .select('*')
+    .select('id')
     .eq('name', trimmed)
-    .single();
+    .maybeSingle();
 
-  if (user) {
-    // Existing user — check password
-    if (!user.password) {
-      // Legacy user without password — set it now
-      await supabase.from('users').update({ password }).eq('id', user.id);
-    } else if (user.password !== password) {
-      throw new Error('Incorrect password');
-    }
-  } else {
-    // Create new user
-    const { data, error } = await supabase
-      .from('users')
-      .insert({
-        name: trimmed,
-        password,
-        avatar_color: AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)],
-      })
-      .select()
-      .single();
+  if (exists) {
+    // Existing user — verify password via secure DB function
+    const { data, error } = await supabase.rpc('login_user', {
+      p_name: trimmed,
+      p_password: password,
+    });
 
     if (error) throw error;
-    user = data;
-  }
+    if (!data || data.length === 0) throw new Error('Incorrect password');
 
-  // Don't store password in localStorage
-  const { password: _, ...safeUser } = user;
-  localStorage.setItem('user', JSON.stringify(safeUser));
-  return safeUser;
+    const user = data[0];
+    localStorage.setItem('user', JSON.stringify(user));
+    return user;
+  } else {
+    // New user — register via secure DB function (hashes password server-side)
+    const { data, error } = await supabase.rpc('register_user', {
+      p_name: trimmed,
+      p_password: password,
+      p_email: null,
+    });
+
+    if (error) {
+      if (error.message.includes('unique') || error.message.includes('duplicate')) {
+        throw new Error('Name already taken');
+      }
+      throw error;
+    }
+    if (!data || data.length === 0) throw new Error('Registration failed');
+
+    const user = data[0];
+    localStorage.setItem('user', JSON.stringify(user));
+    return user;
+  }
 }
 
 export function getUser() {
@@ -60,7 +60,6 @@ export async function updateProfile(userId, newName, newPassword) {
   const trimmed = newName.trim().toLowerCase();
   if (!trimmed) throw new Error('Name is required');
 
-  // Check if name is taken by another user
   const { data: existing } = await supabase
     .from('users')
     .select('id')
@@ -70,19 +69,22 @@ export async function updateProfile(userId, newName, newPassword) {
 
   if (existing) throw new Error('Name already taken');
 
-  const updates = { name: trimmed };
-  if (newPassword) updates.password = newPassword;
-
   const { data, error } = await supabase
     .from('users')
-    .update(updates)
+    .update({ name: trimmed })
     .eq('id', userId)
-    .select()
+    .select('id, name, avatar_color, created_at')
     .single();
 
   if (error) throw error;
 
-  const { password: _, ...safeUser } = data;
-  localStorage.setItem('user', JSON.stringify(safeUser));
-  return safeUser;
+  if (newPassword) {
+    await supabase.rpc('update_user_password', {
+      p_user_id: userId,
+      p_new_password: newPassword,
+    });
+  }
+
+  localStorage.setItem('user', JSON.stringify(data));
+  return data;
 }
