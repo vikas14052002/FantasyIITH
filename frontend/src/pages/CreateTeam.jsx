@@ -400,7 +400,7 @@ export default function CreateTeam() {
           <div key={i} className={`d11-slot ${i < selected.length ? 'd11-slot-filled' : ''}`}>
             {i === selected.length - 1
               ? <span className="d11-slot-num">{selected.length}</span>
-              : i === 10 ? <span className="d11-slot-num">11</span> : null}
+              : null}
           </div>
         ))}
       </div>
