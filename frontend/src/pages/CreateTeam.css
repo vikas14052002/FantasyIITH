@@ -462,8 +462,6 @@
 
 .ct-player-row.selected {
   background: rgba(76, 175, 80, 0.06);
-  margin: 0 -16px;
-  padding: 12px 16px;
   border-bottom-color: rgba(76, 175, 80, 0.15);
 }
 
@@ -533,8 +531,23 @@
   font-size: 13px;
   font-weight: 600;
   color: var(--text-secondary);
-  min-width: 36px;
-  text-align: right;
+  width: 64px;
+  flex-shrink: 0;
+  text-align: center;
+}
+
+.ct-player-list .player-credits {
+  width: 64px;
+  min-width: unset;
+  flex-shrink: 0;
+  text-align: center;
+}
+
+.ct-list-header-right .ct-col-sort {
+  width: 64px;
+  flex-shrink: 0;
+  justify-content: center;
+  padding: 4px 0;
 }
 
 .ct-playing-tag {
@@ -546,6 +559,39 @@
   border-radius: 6px;
   text-transform: uppercase;
   letter-spacing: 0.3px;
+}
+
+.ct-impact-tag {
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.12);
+}
+
+.ct-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 14px;
+  background: var(--bg-elevated);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.ct-section-impact { color: #f59e0b; }
+.ct-section-others { color: var(--text-muted); }
+
+.ct-section-count {
+  font-size: 10px;
+  font-weight: 600;
+  color: inherit;
+  opacity: 0.7;
 }
 
 .ct-select-btn {

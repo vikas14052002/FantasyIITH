@@ -239,6 +239,54 @@ export default function CreateTeam() {
     return sortPlayers(list, sortKey, sortDir);
   }, [players, activeRole, search, sortKey, sortDir]);
 
+  const lineupsSynced = match?.lineups_synced;
+  const playingXI = lineupsSynced ? filteredPlayers.filter(p => p.is_playing && !p.is_impact_sub) : [];
+  const impactSubs = lineupsSynced ? filteredPlayers.filter(p => p.is_impact_sub) : [];
+  const others = lineupsSynced ? filteredPlayers.filter(p => !p.is_playing && !p.is_impact_sub) : filteredPlayers;
+
+  function renderPlayerRow(player) {
+    const isSelected = selected.find(p => p.player_id === player.player_id);
+    const disabled = !isSelected && !canSelect(player);
+    const disabledReason = !isSelected && disabled ? getDisabledReason(player) : null;
+    const tag = player.is_impact_sub ? 'Impact Sub' : player.is_playing ? 'Playing XI' : null;
+    return (
+      <div key={player.player_id}
+        className={`ct-player-row ${isSelected ? 'selected' : ''} ${disabled ? 'disabled' : ''} ${player.is_playing ? 'playing' : ''} ${player.is_impact_sub ? 'impact-sub' : ''}`}
+        onClick={() => !disabled || isSelected ? togglePlayer(player) : null}
+        title={disabledReason || ''}>
+        <div className="ct-player-left">
+          {player.image_url ? (
+            <img className="ct-player-img" src={player.image_url} alt={player.name}
+              style={{ borderColor: isSelected ? 'var(--green)' : player.is_playing ? 'var(--green)' : 'var(--border)' }} />
+          ) : (
+            <div className={`ct-player-avatar ${player.is_playing ? 'playing-xi' : ''} ${player.is_impact_sub ? 'impact-sub-avatar' : ''}`}
+              style={{ background: isSelected ? 'var(--green)' : 'var(--bg-elevated)' }}>
+              {player.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+            </div>
+          )}
+          <div className="player-info">
+            <div className="player-name">{player.name}</div>
+            <div className="player-meta">
+              <span className="team-tag">{player.team}</span>
+              {tag && <span className={`ct-playing-tag ${player.is_impact_sub ? 'ct-impact-tag' : ''}`}>{tag}</span>}
+            </div>
+          </div>
+        </div>
+        <div className="ct-player-right">
+          <span className="ct-player-points">{player.fantasy_points || '-'}</span>
+          <span className="player-credits">{player.credits}</span>
+          <div className={`ct-select-btn ${isSelected ? 'active' : ''}`}>
+            {isSelected ? (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            ) : (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // Check which roles are valid (met minimum)
   const allRolesValid = ROLES.every(r => roleCounts[r] >= ROLE_LIMITS[r].min);
 
@@ -345,7 +393,7 @@ export default function CreateTeam() {
           <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8 }}>
             You cannot create or edit teams after the match has started
           </p>
-          <button className="btn btn-primary" style={{ marginTop: 20, width: 200 }} onClick={() => navigate(-1)}>
+          <button className="btn btn-primary" style={{ marginTop: 20, width: 200, alignSelf: 'center' }} onClick={() => navigate(-1)}>
             GO BACK
           </button>
         </div>
@@ -489,7 +537,7 @@ export default function CreateTeam() {
               Credits
               <svg className={`ct-sort-arrow ${sortKey === 'credits' ? (sortDir === 'asc' ? 'asc' : 'desc') : ''}`} width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
             </button>
-            <span style={{ width: 28 }}></span>
+            <span style={{ width: 32 }}></span>
           </div>
         </div>
         {filteredPlayers.length === 0 && (
@@ -497,47 +545,36 @@ export default function CreateTeam() {
             <span className="ct-empty-text">{search ? 'No players match your search' : 'No players available'}</span>
           </div>
         )}
-        {filteredPlayers.map(player => {
-          const isSelected = selected.find(p => p.player_id === player.player_id);
-          const disabled = !isSelected && !canSelect(player);
-          const disabledReason = !isSelected && disabled ? getDisabledReason(player) : null;
-          return (
-            <div key={player.player_id}
-              className={`ct-player-row ${isSelected ? 'selected' : ''} ${disabled ? 'disabled' : ''} ${player.is_playing ? 'playing' : ''}`}
-              onClick={() => !disabled || isSelected ? togglePlayer(player) : null}
-              title={disabledReason || ''}>
-              <div className="ct-player-left">
-                {player.image_url ? (
-                  <img className="ct-player-img" src={player.image_url} alt={player.name}
-                    style={{ borderColor: isSelected ? 'var(--green)' : player.is_playing ? 'var(--green)' : 'var(--border)' }} />
-                ) : (
-                  <div className={`ct-player-avatar ${player.is_playing ? 'playing-xi' : ''}`}
-                    style={{ background: isSelected ? 'var(--green)' : 'var(--bg-elevated)' }}>
-                    {player.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                  </div>
-                )}
-                <div className="player-info">
-                  <div className="player-name">{player.name}</div>
-                  <div className="player-meta">
-                    <span className="team-tag">{player.team}</span>
-                    {player.is_playing && <span className="ct-playing-tag">Playing XI</span>}
-                  </div>
+        {lineupsSynced ? (
+          <>
+            {playingXI.length > 0 && (
+              <>
+                <div className="ct-section-header">
+                  <span>Playing XI</span><span className="ct-section-count">{playingXI.length}</span>
                 </div>
-              </div>
-              <div className="ct-player-right">
-                <span className="ct-player-points">{player.fantasy_points || '-'}</span>
-                <span className="player-credits">{player.credits}</span>
-                <div className={`ct-select-btn ${isSelected ? 'active' : ''}`}>
-                  {isSelected ? (
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
-                  ) : (
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
-                  )}
+                {playingXI.map(player => renderPlayerRow(player))}
+              </>
+            )}
+            {impactSubs.length > 0 && (
+              <>
+                <div className="ct-section-header ct-section-impact">
+                  <span>Impact Subs</span><span className="ct-section-count">{impactSubs.length}</span>
                 </div>
-              </div>
-            </div>
-          );
-        })}
+                {impactSubs.map(player => renderPlayerRow(player))}
+              </>
+            )}
+            {others.length > 0 && (
+              <>
+                <div className="ct-section-header ct-section-others">
+                  <span>Others</span><span className="ct-section-count">{others.length}</span>
+                </div>
+                {others.map(player => renderPlayerRow(player))}
+              </>
+            )}
+          </>
+        ) : (
+          filteredPlayers.map(player => renderPlayerRow(player))
+        )}
       </div>
 
       {/* Bottom bar */}
