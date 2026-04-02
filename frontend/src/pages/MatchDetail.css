@@ -261,8 +261,9 @@
 /* ── Player Stats ── */
 .md-stats-header {
   display: flex;
-  justify-content: space-between;
-  padding: 6px 0;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px;
   font-size: 10px;
   font-weight: 600;
   color: var(--text-muted);
@@ -275,7 +276,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 0;
+  padding: 10px 12px;
   border-bottom: 1px solid var(--border);
 }
 
@@ -329,10 +330,102 @@
   letter-spacing: 0.3px;
 }
 
+.md-sel-pct {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  width: 64px;
+  flex-shrink: 0;
+  text-align: center;
+}
+
+.md-sel-header-col {
+  width: 64px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  position: relative;
+}
+
+.md-stats-pts-header {
+  width: 40px;
+  flex-shrink: 0;
+  justify-content: flex-end;
+}
+
+.md-sort-col-btn {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding: 0;
+  white-space: nowrap;
+}
+.md-sort-col-btn.active {
+  color: var(--accent);
+}
+
+.md-player-row-mine {
+  background: rgba(99, 102, 241, 0.09);
+  border-left: 3px solid var(--accent);
+  padding-left: 9px;
+}
+
+.md-sel-info-btn {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid var(--text-muted);
+  background: none;
+  color: var(--text-muted);
+  font-size: 9px;
+  font-weight: 700;
+  font-style: italic;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.md-sel-tooltip-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 99;
+}
+
+.md-sel-tooltip {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  right: 0;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 11px;
+  color: var(--text-primary);
+  white-space: nowrap;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  z-index: 100;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 400;
+}
+
 .md-player-pts {
   font-size: 16px;
   font-weight: 700;
-  min-width: 40px;
+  width: 40px;
+  flex-shrink: 0;
   text-align: right;
   color: var(--text-primary);
 }

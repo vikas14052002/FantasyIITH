@@ -27,6 +27,11 @@ export default function MatchDetail() {
   const [compareWith, setCompareWith] = useState(null);
   const [comparing, setComparing] = useState(false);
   const [comparison, setComparison] = useState(null);
+  const [selectionMap, setSelectionMap] = useState(new Map());
+  const [showSelTooltip, setShowSelTooltip] = useState(false);
+  const [userTeamPlayerIds, setUserTeamPlayerIds] = useState(new Set());
+  const [sortBy, setSortBy] = useState('pts');
+  const [sortDir, setSortDir] = useState('desc');
 
   useEffect(() => { loadMatch(); }, [id]);
   useEffect(() => { if (selectedLeague) loadLeagueData(); }, [selectedLeague]);
@@ -94,8 +99,29 @@ export default function MatchDetail() {
       supabase.from('teams').select('id, user_id, total_points').eq('match_id', id).eq('league_id', selectedLeague),
       supabase.from('league_members').select('user_id, users(*)').eq('league_id', selectedLeague),
     ]);
-    setLeagueTeams(teamsRes.data || []);
+    const teams = teamsRes.data || [];
+    setLeagueTeams(teams);
     setLeagueMembers((membersRes.data || []).map(m => m.users));
+    if (teams.length > 0) {
+      const teamIds = teams.map(t => t.id);
+      const { data: tpData } = await supabase.from('team_players').select('team_id, player_id').in('team_id', teamIds);
+      const countMap = new Map();
+      (tpData || []).forEach(tp => countMap.set(tp.player_id, (countMap.get(tp.player_id) || 0) + 1));
+      const pctMap = new Map();
+      countMap.forEach((count, pid) => pctMap.set(pid, Math.round((count / teams.length) * 100)));
+      setSelectionMap(pctMap);
+      // Extract user's own team players
+      const myTeam = teams.find(t => t.user_id === user?.id);
+      if (myTeam) {
+        const myPlayers = (tpData || []).filter(tp => tp.team_id === myTeam.id);
+        setUserTeamPlayerIds(new Set(myPlayers.map(tp => tp.player_id)));
+      } else {
+        setUserTeamPlayerIds(new Set());
+      }
+    } else {
+      setSelectionMap(new Map());
+      setUserTeamPlayerIds(new Set());
+    }
   }
 
   const leaderboard = useMemo(() => {
@@ -108,11 +134,26 @@ export default function MatchDetail() {
     const sorted = [...playing].sort((a, b) => (b.fantasy_points || 0) - (a.fantasy_points || 0));
     const dreamIds = new Set();
     if (match?.status === 'completed') sorted.slice(0, 11).forEach(p => dreamIds.add(p.player_id));
-    return sorted.map(p => ({ ...p, isDream: dreamIds.has(p.player_id) }));
+    const playingWithDream = sorted.map(p => ({ ...p, isDream: dreamIds.has(p.player_id) }));
+    const notPlaying = players.filter(p => !p.is_playing).map(p => ({ ...p, isDream: false }));
+    return [...playingWithDream, ...notPlaying];
   }, [players, match]);
-
-  const bench = useMemo(() => players.filter(p => !p.is_playing), [players]);
   const matchStarted = match && hasMatchStarted(match);
+
+  const sortedFantasyRanked = useMemo(() => {
+    return [...fantasyRanked].sort((a, b) => {
+      if (a.is_playing !== b.is_playing) return a.is_playing ? -1 : 1;
+      let aVal, bVal;
+      if (sortBy === 'pts') { aVal = a.fantasy_points || 0; bVal = b.fantasy_points || 0; }
+      else { aVal = selectionMap.get(a.player_id) ?? -1; bVal = selectionMap.get(b.player_id) ?? -1; }
+      return sortDir === 'desc' ? bVal - aVal : aVal - bVal;
+    });
+  }, [fantasyRanked, sortBy, sortDir, selectionMap]);
+
+  function handleSort(col) {
+    if (sortBy === col) setSortDir(d => d === 'desc' ? 'asc' : 'desc');
+    else { setSortBy(col); setSortDir('desc'); }
+  }
 
   function handleUserClick(member) {
     if (!member.team || !matchStarted) return;
@@ -354,9 +395,24 @@ export default function MatchDetail() {
         <div>
           {match.status === 'completed' && fantasyRanked.length > 0 && <div className="md-dream-banner"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" strokeWidth="2" strokeLinecap="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> Top 11 = <strong>Dream Team</strong></div>}
           {fantasyRanked.length === 0 ? <div className="empty"><div className="empty-icon">🏏</div><p className="empty-text">No scores yet</p></div> : <>
-            <div className="md-stats-header"><span>Player</span><span>Pts</span></div>
-            {fantasyRanked.map(p => <FantasyRow key={p.player_id} p={p} match={match} onClick={() => p.is_playing && setSelectedPlayer(p)} />)}
-            {bench.length > 0 && <><div className="md-bench-divider"><span>Squad ({bench.length})</span></div>{bench.map(p => <FantasyRow key={p.player_id} p={p} match={match} dimmed onClick={() => {}} />)}</>}
+            <div className="md-stats-header">
+              <span style={{flex:1}}>Player</span>
+              {selectionMap.size > 0 && (
+                <div className="md-sel-header-col">
+                  <button className="md-sel-info-btn" onClick={e => { e.stopPropagation(); setShowSelTooltip(t => !t); }}>i</button>
+                  <button className={`md-sort-col-btn ${sortBy==='sel'?'active':''}`} onClick={() => handleSort('sel')}>
+                    Sel%
+                    <SortIcon active={sortBy==='sel'} dir={sortDir} />
+                  </button>
+                  {showSelTooltip && (<><div className="md-sel-tooltip-backdrop" onClick={() => setShowSelTooltip(false)} /><div className="md-sel-tooltip">% of teams in this league that picked this player for this match</div></>)}
+                </div>
+              )}
+              <button className={`md-sort-col-btn md-stats-pts-header ${sortBy==='pts'?'active':''}`} onClick={() => handleSort('pts')}>
+                Pts
+                <SortIcon active={sortBy==='pts'} dir={sortDir} />
+              </button>
+            </div>
+            {sortedFantasyRanked.map(p => <FantasyRow key={p.player_id} p={p} match={match} dimmed={!p.is_playing} selectionPct={selectionMap.get(p.player_id)} inUserTeam={userTeamPlayerIds.has(p.player_id)} onClick={() => p.is_playing && setSelectedPlayer(p)} />)}
           </>}
         </div>
       )}
@@ -384,10 +440,16 @@ function PlayerBreakdown({ player, onClose }) {
   </div></>);
 }
 
-function FantasyRow({ p, match, dimmed, onClick }) {
-  return (<div className="md-player-row" style={{ opacity: dimmed ? 0.35 : 1, cursor: p.is_playing ? 'pointer' : 'default' }} onClick={onClick}>
+function SortIcon({ active, dir }) {
+  if (!active) return <span style={{opacity:0.35, fontSize:10, lineHeight:1, marginLeft:2}}>⇅</span>;
+  return <span style={{fontSize:12, lineHeight:1, marginLeft:2, fontWeight:700}}>{dir === 'desc' ? '↓' : '↑'}</span>;
+}
+
+function FantasyRow({ p, match, dimmed, selectionPct, inUserTeam, onClick }) {
+  return (<div className={`md-player-row ${inUserTeam ? 'md-player-row-mine' : ''}`} style={{ opacity: dimmed ? 0.35 : 1, cursor: p.is_playing ? 'pointer' : 'default' }} onClick={onClick}>
     <div className="md-player-left">{p.image_url ? <img src={p.image_url} alt={p.name} className={`md-player-img ${p.isDream?'md-dream-border':''}`} /> : <div className={`avatar md-player-avatar ${p.isDream?'md-dream-border':''}`} style={{ background: p.team===match.team1_short?'var(--blue)':'var(--coral)' }}>{p.name.split(' ').map(n=>n[0]).join('').slice(0,2)}</div>}{p.isDream&&<div className="md-dream-badge"><svg width="10" height="10" viewBox="0 0 24 24" fill="var(--gold)" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>}</div>
     <div className="player-info" style={{ flex: 1 }}><div className="player-name">{p.name}{p.isDream&&<span className="md-dream-tag">Dream XI</span>}</div><div className="player-meta"><span>{p.team}</span><span>•</span><span>{p.role}</span>{p.runs>0&&<span>• {p.runs}({p.balls})</span>}{p.wickets>0&&<span>• {p.wickets}W</span>}{p.catches>0&&<span>• {p.catches}C</span>}</div></div>
+    {selectionPct !== undefined && <div className="md-sel-pct">{selectionPct}%</div>}
     <div className={`md-player-pts ${(p.fantasy_points||0)>50?'high':(p.fantasy_points||0)<0?'neg':''}`}>{p.is_playing?<AnimatedNumber value={p.fantasy_points||0} />:'-'}</div>
   </div>);
 }
