@@ -54,6 +54,7 @@ export default function CreateTeam() {
   const [flashId, setFlashId] = useState(null);
   const [flashType, setFlashType] = useState(null);
   const [selectionPct, setSelectionPct] = useState({});
+  const [viewMode, setViewMode] = useState('roles'); // 'roles' | 'lineup'
   const navigate = useNavigate();
   const listRef = useRef(null);
   const user = getUser();
@@ -308,6 +309,73 @@ export default function CreateTeam() {
     );
   }
 
+  function renderLineupView() {
+    const team1 = match?.team1_short;
+    const team2 = match?.team2_short;
+
+    // All players from both teams, split by team, sorted by batting_order (0 = bench → last)
+    function teamPlayers(teamShort) {
+      return [...players.filter(p => p.team === teamShort)].sort((a, b) => {
+        const ao = a.batting_order || 0;
+        const bo = b.batting_order || 0;
+        if (ao === 0 && bo === 0) return 0;
+        if (ao === 0) return 1;
+        if (bo === 0) return -1;
+        return ao - bo;
+      });
+    }
+
+    function renderLineupPlayer(player) {
+      const isSelected = !!selected.find(p => p.player_id === player.player_id);
+      const disabled = !isSelected && !canSelect(player);
+      const order = player.batting_order || 0;
+      return (
+        <div
+          key={player.player_id}
+          className={`ct-lu-player ${isSelected ? 'selected' : ''} ${disabled ? 'disabled' : ''} ${player.is_impact_sub ? 'impact-sub' : ''}`}
+          onClick={() => !disabled || isSelected ? togglePlayer(player) : null}
+        >
+          <span className="ct-lu-order">{order > 0 ? order : '·'}</span>
+          <div className="ct-lu-info">
+            <span className="ct-lu-name">{player.name.split(' ').slice(-1)[0]}</span>
+            <span className="ct-lu-role">{player.role}{player.is_impact_sub ? ' ★' : ''}</span>
+          </div>
+          <div className={`ct-select-btn ${isSelected ? 'active' : ''}`}
+            style={{ width: 24, height: 24, minWidth: 24 }}>
+            {isSelected ? (
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            ) : (
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    const t1Players = teamPlayers(team1);
+    const t2Players = teamPlayers(team2);
+
+    return (
+      <div className="ct-lineup-view">
+        <div className="ct-lineup-col">
+          <div className="ct-lineup-col-header">
+            {getTeamLogo(team1) && <img src={getTeamLogo(team1)} alt="" className="ct-lineup-logo" />}
+            <span>{team1}</span>
+          </div>
+          {t1Players.map(renderLineupPlayer)}
+        </div>
+        <div className="ct-lineup-divider" />
+        <div className="ct-lineup-col">
+          <div className="ct-lineup-col-header">
+            {getTeamLogo(team2) && <img src={getTeamLogo(team2)} alt="" className="ct-lineup-logo" />}
+            <span>{team2}</span>
+          </div>
+          {t2Players.map(renderLineupPlayer)}
+        </div>
+      </div>
+    );
+  }
+
   // Check which roles are valid (met minimum)
   const allRolesValid = ROLES.every(r => roleCounts[r] >= ROLE_LIMITS[r].min);
 
@@ -427,10 +495,7 @@ export default function CreateTeam() {
       {/* Header */}
       <div className="ct-header">
         <button className="ct-back" onClick={() => navigate(-1)}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
-            <span style={{ fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 60 }}>Back</span>
-          </span>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
         </button>
         <div className="ct-header-info">
           <span className="ct-match-label">{isEditing ? 'Edit Team' : 'Create Team'}</span>
@@ -518,7 +583,24 @@ export default function CreateTeam() {
         ))}
       </div>
 
-      {/* Role tabs */}
+      {/* View toggle — only show when lineup is announced */}
+      {hasPlayingXI && (
+        <div className="ct-view-toggle">
+          <button
+            className={`ct-view-btn ${viewMode === 'roles' ? 'active' : ''}`}
+            onClick={() => setViewMode('roles')}>
+            By Role
+          </button>
+          <button
+            className={`ct-view-btn ${viewMode === 'lineup' ? 'active' : ''}`}
+            onClick={() => setViewMode('lineup')}>
+            Lineup
+          </button>
+        </div>
+      )}
+
+      {/* Role tabs — hidden in lineup mode */}
+      {viewMode === 'roles' && (
       <div className="tabs ct-tabs">
         {ROLES.map(role => (
           <button key={role} className={`tab ${activeRole === role ? 'active' : ''}`}
@@ -528,8 +610,10 @@ export default function CreateTeam() {
           </button>
         ))}
       </div>
+      )}
 
-      {/* Search */}
+      {/* Search — hidden in lineup mode */}
+      {viewMode === 'roles' && (
       <div className="ct-toolbar">
         <div className="ct-search">
           <svg className="ct-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
@@ -547,8 +631,13 @@ export default function CreateTeam() {
           )}
         </div>
       </div>
+      )}
 
-      {/* Player list */}
+      {/* Lineup view — shown when lineup mode is active and XI is announced */}
+      {viewMode === 'lineup' && hasPlayingXI && renderLineupView()}
+
+      {/* Player list — hidden in lineup mode */}
+      {viewMode === 'roles' && (
       <div className="ct-player-list" ref={listRef}>
         <div className="ct-list-header">
           <span>Player</span>
@@ -599,6 +688,7 @@ export default function CreateTeam() {
           filteredPlayers.map(player => renderPlayerRow(player))
         )}
       </div>
+      )}
 
       {/* Bottom bar */}
       <div className="ct-bottom-bar">

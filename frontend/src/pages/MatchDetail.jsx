@@ -80,7 +80,11 @@ export default function MatchDetail() {
     setLastUpdated(new Date());
     const l = (leagueRes.data || []).map(lm => lm.leagues);
     setLeagues(l);
-    if (l.length > 0 && !selectedLeague) setSelectedLeague(l[0].id);
+    if (l.length > 0 && !selectedLeague) {
+      const saved = localStorage.getItem(`md_league_${id}`);
+      const initial = (saved && l.some(x => x.id === saved)) ? saved : l[0].id;
+      setSelectedLeague(initial);
+    }
     setLoading(false);
   }
 
@@ -223,22 +227,22 @@ export default function MatchDetail() {
       <button onClick={() => navigate(-1)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: 13, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 4, marginBottom: 12, padding: 0, fontFamily: 'Poppins, sans-serif', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>
         <span>&larr;</span> <span>{match.team1_short} vs {match.team2_short}</span>
       </button>
-      <div className="card" style={{ textAlign: 'center', marginBottom: 12 }}>
-        <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 8 }}>Match {match.match_number} • {match.venue || 'PlayXI'}</div>
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 12 }}>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, flex: 1 }}>
-            {getTeamLogo(match.team1_short) && <img src={getTeamLogo(match.team1_short)} alt="" style={{ width: 36, height: 27, objectFit: 'contain' }} />}
-            <span style={{ fontSize: 14, fontWeight: 700 }}>{match.team1_short}</span>
-            {match.team1_score && <span style={{ fontSize: 18, fontWeight: 700 }}>{match.team1_score}</span>}
+      <div className="card" style={{ textAlign: 'center', marginBottom: 8, padding: '8px 12px' }}>
+        <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 4 }}>Match {match.match_number} • {match.venue || 'PlayXI'}</div>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, flex: 1 }}>
+            {getTeamLogo(match.team1_short) && <img src={getTeamLogo(match.team1_short)} alt="" style={{ width: 28, height: 21, objectFit: 'contain' }} />}
+            <span style={{ fontSize: 12, fontWeight: 700 }}>{match.team1_short}</span>
+            {match.team1_score && <span style={{ fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap' }}>{match.team1_score}</span>}
           </div>
-          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>VS</span>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, flex: 1 }}>
-            {getTeamLogo(match.team2_short) && <img src={getTeamLogo(match.team2_short)} alt="" style={{ width: 36, height: 27, objectFit: 'contain' }} />}
-            <span style={{ fontSize: 14, fontWeight: 700 }}>{match.team2_short}</span>
-            {match.team2_score && <span style={{ fontSize: 18, fontWeight: 700 }}>{match.team2_score}</span>}
+          <span style={{ fontSize: 10, color: 'var(--text-muted)', flexShrink: 0 }}>VS</span>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, flex: 1 }}>
+            {getTeamLogo(match.team2_short) && <img src={getTeamLogo(match.team2_short)} alt="" style={{ width: 28, height: 21, objectFit: 'contain' }} />}
+            <span style={{ fontSize: 12, fontWeight: 700 }}>{match.team2_short}</span>
+            {match.team2_score && <span style={{ fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap' }}>{match.team2_score}</span>}
           </div>
         </div>
-        {match.result ? <div style={{ fontSize: 11, color: 'var(--green)', fontWeight: 600, marginTop: 8 }}>{match.result}</div> : <span className={`badge badge-${match.status}`} style={{ marginTop: 8 }}>{match.status.toUpperCase()}</span>}
+        {match.result ? <div style={{ fontSize: 10, color: 'var(--green)', fontWeight: 600, marginTop: 4 }}>{match.result}</div> : <span className={`badge badge-${match.status}`} style={{ marginTop: 4 }}>{match.status.toUpperCase()}</span>}
       </div>
 
       {match.status === 'live' && lastUpdated && (() => {
@@ -267,7 +271,7 @@ export default function MatchDetail() {
         </div>);
       })() : activeTab === 'leaderboard' ? (
         <div>
-          {leagues.length > 1 && <select className="input" value={selectedLeague} onChange={e => { setSelectedLeague(e.target.value); setCompareMode(false); setComparison(null); setCompareWith(null); }} style={{ marginBottom: 12 }}>{leagues.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</select>}
+          {leagues.length > 1 && <select className="input" value={selectedLeague} onChange={e => { setSelectedLeague(e.target.value); localStorage.setItem(`md_league_${id}`, e.target.value); setCompareMode(false); setComparison(null); setCompareWith(null); }} style={{ marginBottom: 12 }}>{leagues.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</select>}
           {leaderboard.length === 0 ? <div className="empty"><div className="empty-icon">📊</div><p className="empty-text">No teams yet</p></div> : (
             <div className="md-lb">
               <div className="md-lb-header"><span>#</span><span style={{ flex: 1 }}>Player</span><div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span>Points</span>{matchStarted && <button className={`md-compare-icon-btn ${compareMode ? 'active' : ''}`} onClick={toggleCompareMode}>{compareMode ? <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> : <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M8 3L4 7l4 4"/><path d="M4 7h16"/><path d="M16 21l4-4-4-4"/><path d="M20 17H4"/></svg>}</button>}</div></div>

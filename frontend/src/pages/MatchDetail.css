@@ -159,11 +159,15 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 8px;
+  padding: 8px 8px;
   border-bottom: 1px solid var(--border);
   border-radius: 8px;
   transition: background 0.15s;
-  min-height: 44px;
+  min-height: 40px;
+}
+
+.md-player-row .player-name {
+  font-size: 12px;
 }
 
 .md-lb-row.md-lb-me {

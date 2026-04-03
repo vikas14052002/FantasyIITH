@@ -459,11 +459,11 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 0;
+  padding: 9px 0;
   border-bottom: 1px solid var(--border);
   cursor: pointer;
   transition: all 0.2s;
-  min-height: 44px;
+  min-height: 40px;
 }
 
 .ct-player-row.flash-select {
@@ -513,8 +513,8 @@
 }
 
 .ct-player-img {
-  width: 48px;
-  height: 48px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   object-fit: cover;
   flex-shrink: 0;
@@ -524,13 +524,13 @@
 }
 
 .ct-player-avatar {
-  width: 48px;
-  height: 48px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 700;
   color: white;
   flex-shrink: 0;
@@ -625,7 +625,7 @@
 }
 
 .player-name {
-  font-size: 14px;
+  font-size: 12px;
 }
 
 .ct-player-points {
@@ -794,6 +794,125 @@
 
 .ct-next-btn {
   gap: 6px;
+}
+
+/* ── View toggle (Roles / Lineup) ── */
+.ct-view-toggle {
+  display: flex;
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border);
+  padding: 4px 16px;
+  gap: 4px;
+}
+.ct-view-btn {
+  flex: 1;
+  padding: 6px 0;
+  font-size: 12px;
+  font-weight: 600;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.ct-view-btn.active {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.18);
+}
+
+/* ── Lineup view ── */
+.ct-lineup-view {
+  display: flex;
+  flex: 1;
+  overflow-y: auto;
+  gap: 0;
+  padding: 0 0 80px;
+}
+.ct-lineup-col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.ct-lineup-divider {
+  width: 1px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+.ct-lineup-col-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+.ct-lineup-logo {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+}
+.ct-lu-player {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 8px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.ct-lu-player:hover:not(.disabled) {
+  background: var(--bg-elevated);
+}
+.ct-lu-player.selected {
+  background: rgba(22, 163, 74, 0.08);
+}
+.ct-lu-player.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.ct-lu-player.impact-sub .ct-lu-name {
+  color: #9C27B0;
+}
+.ct-lu-order {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-muted);
+  width: 14px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.ct-lu-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+  min-width: 0;
+}
+.ct-lu-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ct-lu-role {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
 }
 
 /* ── Full-screen Field Preview ── */

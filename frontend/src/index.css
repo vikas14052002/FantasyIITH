@@ -28,6 +28,7 @@
   --tab-inactive: var(--text-secondary);
   --card-bg: rgba(28, 28, 46, 0.75);
   --field-green: #0a5e32;
+  --accent: #22D3EE;
 }
 
 :root[data-theme="light"] {
@@ -47,6 +48,7 @@
   --blue: #1565C0;
   --teal: #00838F;
   --coral: #E53935;
+  --accent: #0891B2;
   /* Liquid glass light mode */
   --glass-bg: rgba(255, 255, 255, 0.72);
   --glass-border: rgba(0, 0, 0, 0.04);
