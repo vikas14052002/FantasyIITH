@@ -662,10 +662,7 @@
   letter-spacing: 0.3px;
 }
 
-.ct-impact-tag {
-  color: #f59e0b;
-  background: rgba(245, 158, 11, 0.12);
-}
+/* removed duplicate - purple version in line 554 */
 
 .ct-section-header {
   display: flex;
