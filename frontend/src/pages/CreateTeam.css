@@ -542,6 +542,24 @@
   border-color: var(--green);
 }
 
+.ct-player-avatar.impact-sub-avatar {
+  border-color: #9C27B0;
+}
+
+.ct-player-row.impact-sub {
+  border-left: 3px solid #9C27B0;
+  padding-left: 10px;
+}
+
+.ct-impact-tag {
+  background: rgba(156, 39, 176, 0.12) !important;
+  color: #9C27B0 !important;
+}
+
+.ct-not-in-squad {
+  opacity: 0.45;
+}
+
 /* ── Section Dividers ── */
 .ct-section-divider {
   display: flex;
@@ -667,8 +685,19 @@
   z-index: 1;
 }
 
-.ct-section-impact { color: #f59e0b; }
-.ct-section-others { color: var(--text-muted); }
+.ct-section-impact {
+  color: #9C27B0;
+  border-top-color: rgba(156, 39, 176, 0.3);
+  border-bottom-color: rgba(156, 39, 176, 0.3);
+  background: rgba(156, 39, 176, 0.06);
+}
+
+.ct-section-others {
+  color: var(--coral);
+  border-top-color: rgba(236, 116, 100, 0.3);
+  border-bottom-color: rgba(236, 116, 100, 0.3);
+  background: rgba(236, 116, 100, 0.06);
+}
 
 .ct-section-count {
   font-size: 10px;

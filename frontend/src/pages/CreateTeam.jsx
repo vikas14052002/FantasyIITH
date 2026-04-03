@@ -258,15 +258,12 @@ export default function CreateTeam() {
     return sortPlayers(list, sortKey, sortDir, selectionPct);
   }, [players, activeRole, search, sortKey, sortDir, selectionPct]);
 
-  // Check if any player has is_playing set (squad announced)
-  const squadAnnounced = useMemo(() => players.some(p => p.is_playing), [players]);
-  const playingXI = useMemo(() => filteredPlayers.filter(p => p.is_playing), [filteredPlayers]);
-  const notInXI = useMemo(() => filteredPlayers.filter(p => !p.is_playing), [filteredPlayers]);
 
-  const lineupsSynced = match?.lineups_synced;
-  const playingXI = lineupsSynced ? filteredPlayers.filter(p => p.is_playing && !p.is_impact_sub) : [];
-  const impactSubs = lineupsSynced ? filteredPlayers.filter(p => p.is_impact_sub) : [];
-  const others = lineupsSynced ? filteredPlayers.filter(p => !p.is_playing && !p.is_impact_sub) : filteredPlayers;
+  // Detect squad announcement from actual player data, not lineups_synced flag
+  const hasPlayingXI = useMemo(() => players.some(p => p.is_playing), [players]);
+  const playingXI = hasPlayingXI ? filteredPlayers.filter(p => p.is_playing && !p.is_impact_sub) : [];
+  const impactSubs = hasPlayingXI ? filteredPlayers.filter(p => p.is_impact_sub) : [];
+  const others = hasPlayingXI ? filteredPlayers.filter(p => !p.is_playing && !p.is_impact_sub) : filteredPlayers;
 
   function renderPlayerRow(player) {
     const isSelected = selected.find(p => p.player_id === player.player_id);
@@ -281,7 +278,7 @@ export default function CreateTeam() {
         <div className="ct-player-left">
           {player.image_url ? (
             <img className="ct-player-img" src={player.image_url} alt={player.name}
-              style={{ borderColor: isSelected ? 'var(--green)' : player.is_playing ? 'var(--green)' : 'var(--border)' }} />
+              style={{ borderColor: isSelected ? 'var(--green)' : player.is_impact_sub ? '#9C27B0' : player.is_playing ? 'var(--green)' : 'var(--border)' }} />
           ) : (
             <div className={`ct-player-avatar ${player.is_playing ? 'playing-xi' : ''} ${player.is_impact_sub ? 'impact-sub-avatar' : ''}`}
               style={{ background: isSelected ? 'var(--green)' : 'var(--bg-elevated)' }}>
@@ -559,10 +556,6 @@ export default function CreateTeam() {
             <button className={`ct-col-sort ${sortKey === 'selection' ? 'active' : ''}`} onClick={() => { setSortKey('selection'); setSortDir('desc'); }}>
               Sel%
             </button>
-            <button className={`ct-col-sort ${sortKey === 'points' ? 'active' : ''}`} onClick={() => toggleSort('points')}>
-              Pts
-              <svg className={`ct-sort-arrow ${sortKey === 'points' ? (sortDir === 'asc' ? 'asc' : 'desc') : ''}`} width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
-            </button>
             <button className={`ct-col-sort ${sortKey === 'credits' ? 'active' : ''}`} onClick={() => toggleSort('credits')}>
               Cr
               <svg className={`ct-sort-arrow ${sortKey === 'credits' ? (sortDir === 'asc' ? 'asc' : 'desc') : ''}`} width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
@@ -575,7 +568,7 @@ export default function CreateTeam() {
             <span className="ct-empty-text">{search ? 'No players match your search' : 'No players available'}</span>
           </div>
         )}
-        {lineupsSynced ? (
+        {hasPlayingXI ? (
           <>
             {playingXI.length > 0 && (
               <>
@@ -596,7 +589,7 @@ export default function CreateTeam() {
             {others.length > 0 && (
               <>
                 <div className="ct-section-header ct-section-others">
-                  <span>Others</span><span className="ct-section-count">{others.length}</span>
+                  <span>Not in Squad</span><span className="ct-section-count">{others.length}</span>
                 </div>
                 {others.map(player => renderPlayerRow(player))}
               </>
@@ -691,7 +684,7 @@ export default function CreateTeam() {
         <div className="ct-player-left">
           {player.image_url ? (
             <img className="ct-player-img" src={player.image_url} alt={player.name}
-              style={{ borderColor: isSelected ? 'var(--green)' : player.is_playing ? 'var(--green)' : 'var(--border)' }} />
+              style={{ borderColor: isSelected ? 'var(--green)' : player.is_impact_sub ? '#9C27B0' : player.is_playing ? 'var(--green)' : 'var(--border)' }} />
           ) : (
             <div className={`ct-player-avatar ${player.is_playing ? 'playing-xi' : ''}`}
               style={{ background: isSelected ? 'var(--green)' : 'var(--bg-elevated)' }}>
