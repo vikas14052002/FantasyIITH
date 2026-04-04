@@ -1,6 +1,6 @@
-import { lazy, Suspense, useEffect } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { getUser } from './lib/auth';
+import { getUser, needsPhoneLink } from './lib/auth';
 import { startHeartbeat } from './lib/heartbeat';
 import { initTheme } from './lib/theme';
 import Header from './components/Header';
@@ -8,6 +8,7 @@ import BottomNav from './components/BottomNav';
 import UpdatePrompt from './components/UpdatePrompt';
 import ErrorBoundary from './components/ErrorBoundary';
 import OfflineBanner from './components/OfflineBanner';
+import PhoneLinkPopup from './components/PhoneLinkPopup';
 import { PageLoaderSkeleton } from './components/Skeleton';
 
 // Apply saved theme on load
@@ -50,11 +51,13 @@ function PageLoader() {
 }
 
 export default function App() {
+  const [showPhoneLink, setShowPhoneLink] = useState(needsPhoneLink());
   useEffect(() => { startHeartbeat(); }, []);
   return (
     <BrowserRouter>
       <OfflineBanner />
       <UpdatePrompt />
+      {showPhoneLink && <PhoneLinkPopup onComplete={() => setShowPhoneLink(false)} />}
       <ErrorBoundary>
       <Suspense fallback={<PageLoader />}>
         <Routes>

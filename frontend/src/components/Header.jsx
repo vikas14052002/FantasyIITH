@@ -100,7 +100,11 @@ export default function Header() {
                     </div>
                     <div className="profile-menu-details">
                       <span className="profile-menu-name">{user.name}</span>
-                      <span className="profile-menu-role">Player</span>
+                      {user.phone ? (
+                        <span className="profile-menu-phone">{user.phone}</span>
+                      ) : (
+                        <span className="profile-menu-role">Player</span>
+                      )}
                     </div>
                   </div>
 
