@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { loginWithPhone, linkPhoneToExisting } from '../lib/auth';
 import { sendOTP, verifyOTP } from '../lib/firebase';
 import { supabase } from '../lib/supabase';
+import { logError } from '../lib/errorLogger';
 import './Login.css';
 
 export default function Login() {
@@ -64,6 +65,7 @@ export default function Login() {
       const msg = err.code === 'auth/too-many-requests' ? 'Too many attempts. Wait a few minutes.'
         : 'Failed to resend. Try again later.';
       setError(msg);
+      logError('resend_otp', err, { phone });
     } finally {
       setLoading(false);
     }
@@ -86,6 +88,7 @@ export default function Login() {
         : err.code === 'auth/network-request-failed' ? 'Network error. Check your connection.'
         : 'Something went wrong. Please try again.';
       setError(msg);
+      logError('send_otp', err, { phone });
     } finally {
       setLoading(false);
     }
@@ -119,6 +122,7 @@ export default function Login() {
         : err.code === 'auth/network-request-failed' ? 'Network error. Check your connection.'
         : 'Verification failed. Please try again.';
       setError(msg);
+      logError('verify_otp', err, { phone });
     } finally {
       setLoading(false);
     }
@@ -134,6 +138,7 @@ export default function Login() {
       navigate('/leagues');
     } catch (err) {
       setError(err.message || 'Something went wrong');
+      logError('new_account', err, { phone, userName: name });
     } finally {
       setLoading(false);
     }
@@ -149,6 +154,7 @@ export default function Login() {
       navigate('/leagues');
     } catch (err) {
       setError(err.message || 'Failed to link account');
+      logError('link_account', err, { phone, userName: oldName });
     } finally {
       setLoading(false);
     }
