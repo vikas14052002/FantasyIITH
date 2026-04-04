@@ -17,7 +17,7 @@ export default function PhoneLinkPopup({ onComplete }) {
     setLoading(true);
     setError('');
     try {
-      const confirmation = await sendOTP(phone, 'link-recaptcha');
+      const confirmation = await sendOTP(phone);
       confirmationRef.current = confirmation;
       setStep('otp');
     } catch (err) {

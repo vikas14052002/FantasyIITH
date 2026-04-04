@@ -15,25 +15,29 @@ export const auth = getAuth(app);
 
 let recaptchaVerifier = null;
 
-function setupRecaptcha(containerId) {
-  // Clear old verifier if exists
+function getRecaptcha() {
+  // Always clear and recreate
   if (recaptchaVerifier) {
     try { recaptchaVerifier.clear(); } catch {}
     recaptchaVerifier = null;
   }
 
-  // Ensure container exists
-  let container = document.getElementById(containerId);
-  if (!container) {
-    container = document.createElement('div');
-    container.id = containerId;
-    document.body.appendChild(container);
+  // Remove old container and create fresh one
+  const oldEl = document.getElementById('recaptcha-container');
+  if (oldEl) oldEl.innerHTML = '';
+
+  // If element doesn't exist, create it
+  if (!oldEl) {
+    const el = document.createElement('div');
+    el.id = 'recaptcha-container';
+    document.body.appendChild(el);
   }
 
-  recaptchaVerifier = new RecaptchaVerifier(auth, containerId, {
+  recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
     size: 'invisible',
     callback: () => {},
     'expired-callback': () => {
+      if (recaptchaVerifier) { try { recaptchaVerifier.clear(); } catch {} }
       recaptchaVerifier = null;
     },
   });
@@ -41,14 +45,15 @@ function setupRecaptcha(containerId) {
   return recaptchaVerifier;
 }
 
-export async function sendOTP(phoneNumber, containerId) {
-  const verifier = setupRecaptcha(containerId);
+export async function sendOTP(phoneNumber) {
+  const verifier = getRecaptcha();
   const fullNumber = phoneNumber.startsWith('+') ? phoneNumber : `+91${phoneNumber}`;
   try {
-    const confirmationResult = await signInWithPhoneNumber(auth, fullNumber, verifier);
-    return confirmationResult;
+    const result = await signInWithPhoneNumber(auth, fullNumber, verifier);
+    return result;
   } catch (err) {
-    // Reset verifier on failure so next attempt gets a fresh one
+    // Clear on failure
+    if (recaptchaVerifier) { try { recaptchaVerifier.clear(); } catch {} }
     recaptchaVerifier = null;
     throw err;
   }

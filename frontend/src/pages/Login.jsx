@@ -58,7 +58,7 @@ export default function Login() {
     setError('');
     setOtp('');
     try {
-      const confirmation = await sendOTP(phone, 'recaptcha-container');
+      const confirmation = await sendOTP(phone);
       confirmationRef.current = confirmation;
       startResendTimer();
     } catch (err) {
@@ -77,7 +77,7 @@ export default function Login() {
     setLoading(true);
     setError('');
     try {
-      const confirmation = await sendOTP(phone, 'recaptcha-container');
+      const confirmation = await sendOTP(phone);
       confirmationRef.current = confirmation;
       setStep('otp');
       startResendTimer();
