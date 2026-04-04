@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { getUser } from '../lib/auth';
 import { hasMatchStarted } from '../lib/matchLock';
@@ -19,9 +19,8 @@ export default function TeamPreview() {
   const [showBench, setShowBench] = useState(false);
   const [showShare, setShowShare] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const user = getUser();
-
-  useEffect(() => { loadTeam(); }, [teamId]);
 
   async function loadTeam() {
     // Fetch team metadata (always allowed)
@@ -49,7 +48,7 @@ export default function TeamPreview() {
         .from('match_players')
         .select('player_id, fantasy_points')
         .eq('match_id', teamData.match_id)
-        .eq('is_playing', true)
+        .or('is_playing.eq.true,is_impact_sub.eq.true')
         .order('fantasy_points', { ascending: false })
         .limit(11);
       if (allMp) {
@@ -58,6 +57,21 @@ export default function TeamPreview() {
     }
 
     setLoading(false);
+  }
+
+  useEffect(() => { loadTeam(); }, [teamId]);
+
+  function goBackFromPreview() {
+    const from = location.state?.from;
+    if (from) {
+      navigate(from);
+      return;
+    }
+    if (team?.match_id) {
+      navigate(`/match/${team.match_id}`);
+      return;
+    }
+    navigate(-1);
   }
 
   function getImage(playerId) {
@@ -118,7 +132,9 @@ export default function TeamPreview() {
     <div className="preview-page">
       {/* Top header bar */}
       <div className="preview-header">
-        <div style={{ width: 32 }} />
+        <button type="button" className="preview-back" onClick={goBackFromPreview} aria-label="Back">
+          ←
+        </button>
         <div className="preview-header-center">
           <span className="preview-match-title">{team1} vs {team2}</span>
           <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
@@ -271,7 +287,15 @@ export default function TeamPreview() {
         <button className="btn btn-outline" style={{ flex: 0, minWidth: 48, padding: '12px' }} onClick={() => setShowShare(true)} title="Share Team">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
         </button>
-        <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => navigate(`/leagues/${team.league_id}`)}>
+        <button
+          className="btn btn-primary"
+          style={{ flex: 1 }}
+          onClick={() => {
+            if (matchStarted) goBackFromPreview();
+            else if (team.league_id) navigate(`/leagues/${team.league_id}`);
+            else goBackFromPreview();
+          }}
+        >
           {matchStarted ? 'BACK' : 'CONTINUE'}
         </button>
       </div>

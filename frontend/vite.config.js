@@ -1,6 +1,8 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
+// Phone: `npm run dev:phone` → open LAN URL on device, or Chrome DevTools → device toolbar (Cmd/Ctrl+Shift+M).
+
 export default defineConfig({
   plugins: [react()],
   server: {

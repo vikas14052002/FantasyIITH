@@ -1,10 +1,8 @@
 export function computePlayerPoints(stats, config) {
   let points = 0;
 
-  // Playing XI bonus
-  if (stats.is_playing) points += config.inPlayingXI || 4;
+  if (stats.is_playing || stats.is_impact_sub) points += config.inPlayingXI || 4;
 
-  // Batting
   points += (stats.runs || 0) * config.run;
   points += (stats.fours || 0) * config.four;
   points += (stats.sixes || 0) * config.six;
@@ -14,11 +12,8 @@ export function computePlayerPoints(stats, config) {
     points += config.duck;
   }
 
-  // Bowling
   points += (stats.wickets || 0) * config.wicket;
   points += (stats.maidens || 0) * config.maiden;
-
-  // Fielding
   points += (stats.catches || 0) * config.catch;
   points += (stats.stumpings || 0) * config.stumping;
   points += (stats.run_outs || 0) * config.runOut;

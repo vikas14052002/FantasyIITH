@@ -5,6 +5,7 @@ import { getUser } from '../lib/auth';
 import { hasMatchStarted } from '../lib/matchLock';
 import { TEAM_COLORS, getTeamLogo } from '../lib/teamLogos';
 import { MatchDetailSkeleton } from '../components/Skeleton';
+import { isFantasyRosterActive } from '../lib/matchPlayers';
 import './CreateTeam.css';
 
 const ROLES = ['WK', 'BAT', 'AR', 'BOWL'];
@@ -18,16 +19,13 @@ function sortPlayers(players, sortKey, sortDir, pctMap) {
   const sorted = [...players];
   const dir = sortDir === 'asc' ? 1 : -1;
   sorted.sort((a, b) => {
-    // Playing XI first
-    const aPlaying = a.is_playing ? 1 : 0;
-    const bPlaying = b.is_playing ? 1 : 0;
+    // Announced squad (Playing XI + impact subs) first
+    const aPlaying = isFantasyRosterActive(a) ? 1 : 0;
+    const bPlaying = isFantasyRosterActive(b) ? 1 : 0;
     if (aPlaying !== bPlaying) return bPlaying - aPlaying;
     // Then by sort key
     if (sortKey === 'selection') {
       return (pctMap[b.player_id] || 0) - (pctMap[a.player_id] || 0);
-    }
-    if (sortKey === 'points') {
-      return dir * ((a.fantasy_points || 0) - (b.fantasy_points || 0));
     }
     return dir * (a.credits - b.credits);
   });
@@ -261,7 +259,7 @@ export default function CreateTeam() {
 
 
   // Detect squad announcement from actual player data, not lineups_synced flag
-  const hasPlayingXI = useMemo(() => players.some(p => p.is_playing), [players]);
+  const hasPlayingXI = useMemo(() => players.some(isFantasyRosterActive), [players]);
   const playingXI = hasPlayingXI ? filteredPlayers.filter(p => p.is_playing && !p.is_impact_sub) : [];
   const impactSubs = hasPlayingXI ? filteredPlayers.filter(p => p.is_impact_sub) : [];
   const others = hasPlayingXI ? filteredPlayers.filter(p => !p.is_playing && !p.is_impact_sub) : filteredPlayers;
@@ -271,9 +269,11 @@ export default function CreateTeam() {
     const disabled = !isSelected && !canSelect(player);
     const disabledReason = !isSelected && disabled ? getDisabledReason(player) : null;
     const tag = player.is_impact_sub ? 'Impact Sub' : player.is_playing ? 'Playing XI' : null;
+    const pct = selectionPct[player.player_id];
+    const pctColor = pct >= 70 ? 'ct-pct-high' : pct >= 40 ? 'ct-pct-mid' : 'ct-pct-low';
     return (
       <div key={player.player_id}
-        className={`ct-player-row ${isSelected ? 'selected' : ''} ${disabled ? 'disabled' : ''} ${player.is_playing ? 'playing' : ''} ${player.is_impact_sub ? 'impact-sub' : ''}`}
+        className={`ct-player-row ${isSelected ? 'selected' : ''} ${disabled ? 'disabled' : ''} ${isFantasyRosterActive(player) ? 'playing' : ''} ${player.is_impact_sub ? 'impact-sub' : ''}`}
         onClick={() => !disabled || isSelected ? togglePlayer(player) : null}
         title={disabledReason || ''}>
         <div className="ct-player-left">
@@ -295,7 +295,9 @@ export default function CreateTeam() {
           </div>
         </div>
         <div className="ct-player-right">
-          <span className="ct-player-points">{player.fantasy_points || '-'}</span>
+          <div className="ct-pct-slot">
+            {pct != null ? <span className={`ct-pct-badge ${pctColor}`}>{pct}%</span> : null}
+          </div>
           <span className="player-credits">{player.credits}</span>
           <div className={`ct-select-btn ${isSelected ? 'active' : ''}`}>
             {isSelected ? (
@@ -642,14 +644,14 @@ export default function CreateTeam() {
         <div className="ct-list-header">
           <span>Player</span>
           <div className="ct-list-header-right">
-            <button className={`ct-col-sort ${sortKey === 'selection' ? 'active' : ''}`} onClick={() => { setSortKey('selection'); setSortDir('desc'); }}>
+            <button type="button" className={`ct-col-sort ct-col-sel ${sortKey === 'selection' ? 'active' : ''}`} onClick={() => { setSortKey('selection'); setSortDir('desc'); }}>
               Sel%
             </button>
-            <button className={`ct-col-sort ${sortKey === 'credits' ? 'active' : ''}`} onClick={() => toggleSort('credits')}>
+            <button type="button" className={`ct-col-sort ct-col-cr ${sortKey === 'credits' ? 'active' : ''}`} onClick={() => toggleSort('credits')}>
               Cr
               <svg className={`ct-sort-arrow ${sortKey === 'credits' ? (sortDir === 'asc' ? 'asc' : 'desc') : ''}`} width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
             </button>
-            <span style={{ width: 32 }}></span>
+            <span className="ct-list-btn-spacer" aria-hidden />
           </div>
         </div>
         {filteredPlayers.length === 0 && (
@@ -761,49 +763,6 @@ export default function CreateTeam() {
       )}
     </div>
   );
-
-  function PlayerRow({ player, dimmed }) {
-    const isSelected = selected.find(p => p.player_id === player.player_id);
-    const disabled = !isSelected && !canSelect(player);
-    const pct = selectionPct[player.player_id];
-    const pctColor = pct >= 70 ? 'ct-pct-high' : pct >= 40 ? 'ct-pct-mid' : 'ct-pct-low';
-    return (
-      <div
-        className={`ct-player-row ${isSelected ? 'selected' : ''} ${disabled ? 'disabled' : ''} ${player.is_playing ? 'playing' : ''} ${dimmed ? 'ct-dimmed' : ''} ${flashId === player.player_id ? (flashType === 'select' ? 'flash-select' : 'flash-deselect') : ''}`}
-        onClick={() => !disabled || isSelected ? togglePlayer(player) : null}>
-        <div className="ct-player-left">
-          {player.image_url ? (
-            <img className="ct-player-img" src={player.image_url} alt={player.name}
-              style={{ borderColor: isSelected ? 'var(--green)' : player.is_impact_sub ? '#9C27B0' : player.is_playing ? 'var(--green)' : 'var(--border)' }} />
-          ) : (
-            <div className={`ct-player-avatar ${player.is_playing ? 'playing-xi' : ''}`}
-              style={{ background: isSelected ? 'var(--green)' : 'var(--bg-elevated)' }}>
-              {player.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
-            </div>
-          )}
-          <div className="player-info" onClick={(e) => { e.stopPropagation(); setStatsPlayer(player); }}>
-            <div className="player-name">{player.name} <svg className="ct-info-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg></div>
-            <div className="player-meta">
-              <span className="team-tag">{player.team}</span>
-              {player.is_playing && <span className="ct-playing-tag">Playing XI</span>}
-            </div>
-          </div>
-        </div>
-        <div className="ct-player-right">
-          {pct != null && <span className={`ct-pct-badge ${pctColor}`}>{pct}%</span>}
-          <span className="ct-player-points">{player.fantasy_points || '-'}</span>
-          <span className="player-credits">{player.credits}</span>
-          <div className={`ct-select-btn ${isSelected ? 'active' : ''}`}>
-            {isSelected ? (
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
-            ) : (
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   function getDisabledReason(player) {
     if (selected.length >= 11) return 'Team is full (11/11)';

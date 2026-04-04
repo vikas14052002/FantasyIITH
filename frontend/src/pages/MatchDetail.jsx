@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { getUser } from '../lib/auth';
 import { getTeamLogo } from '../lib/teamLogos';
+import { isFantasyRosterActive } from '../lib/matchPlayers';
 import { hasMatchStarted } from '../lib/matchLock';
 import AnimatedNumber from '../components/AnimatedNumber';
 import { MatchDetailSkeleton } from '../components/Skeleton';
@@ -135,22 +136,29 @@ export default function MatchDetail() {
   }, [leagueMembers, leagueTeams]);
 
   const fantasyRanked = useMemo(() => {
-    const playing = players.filter(p => p.is_playing);
-    const sorted = [...playing].sort((a, b) => (b.fantasy_points || 0) - (a.fantasy_points || 0));
+    const active = players.filter(isFantasyRosterActive);
+    const sorted = [...active].sort((a, b) => (b.fantasy_points || 0) - (a.fantasy_points || 0));
     const dreamIds = new Set();
     if (match?.status === 'completed') sorted.slice(0, 11).forEach(p => dreamIds.add(p.player_id));
-    const playingWithDream = sorted.map(p => ({ ...p, isDream: dreamIds.has(p.player_id) }));
-    const notPlaying = players.filter(p => !p.is_playing).map(p => ({ ...p, isDream: false }));
-    return [...playingWithDream, ...notPlaying];
+    const activeWithDream = sorted.map(p => ({ ...p, isDream: dreamIds.has(p.player_id) }));
+    const bench = players.filter(p => !isFantasyRosterActive(p)).map(p => ({ ...p, isDream: false }));
+    return [...activeWithDream, ...bench];
   }, [players, match]);
   const matchStarted = match && hasMatchStarted(match);
 
   const sortedFantasyRanked = useMemo(() => {
     return [...fantasyRanked].sort((a, b) => {
-      if (a.is_playing !== b.is_playing) return a.is_playing ? -1 : 1;
+      const aAct = isFantasyRosterActive(a);
+      const bAct = isFantasyRosterActive(b);
+      if (aAct !== bAct) return aAct ? -1 : 1;
       let aVal, bVal;
-      if (sortBy === 'pts') { aVal = a.fantasy_points || 0; bVal = b.fantasy_points || 0; }
-      else { aVal = selectionMap.get(a.player_id) ?? -1; bVal = selectionMap.get(b.player_id) ?? -1; }
+      if (sortBy === 'pts') {
+        aVal = a.fantasy_points || 0;
+        bVal = b.fantasy_points || 0;
+      } else {
+        aVal = selectionMap.get(a.player_id) ?? -1;
+        bVal = selectionMap.get(b.player_id) ?? -1;
+      }
       return sortDir === 'desc' ? bVal - aVal : aVal - bVal;
     });
   }, [fantasyRanked, sortBy, sortDir, selectionMap]);
@@ -163,7 +171,7 @@ export default function MatchDetail() {
   function handleUserClick(member) {
     if (!member.team || !matchStarted) return;
     if (compareMode) { if (member.id !== user?.id) doCompare(member.id); }
-    else navigate(`/team-preview/${member.team.id}`);
+    else navigate(`/team-preview/${member.team.id}`, { state: { from: `/match/${id}` } });
   }
 
   function toggleCompareMode() { setCompareMode(m => !m); setCompareWith(null); setComparison(null); }
@@ -224,7 +232,14 @@ export default function MatchDetail() {
 
   return (
     <div className="page fade-in">
-      <button onClick={() => navigate(-1)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: 13, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 4, marginBottom: 12, padding: 0, fontFamily: 'Poppins, sans-serif', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>
+      <button
+        type="button"
+        onClick={() => {
+          if (selectedLeague) navigate(`/leagues/${selectedLeague}`);
+          else navigate(-1);
+        }}
+        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: 13, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 4, marginBottom: 12, padding: 0, fontFamily: 'Poppins, sans-serif', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}
+      >
         <span>&larr;</span> <span>{match.team1_short} vs {match.team2_short}</span>
       </button>
       <div className="card" style={{ textAlign: 'center', marginBottom: 8, padding: '8px 12px' }}>
@@ -258,7 +273,7 @@ export default function MatchDetail() {
       </div>
 
       {activeTab === 'scorecard' ? (() => {
-        const playing = players.filter(p => p.is_playing);
+        const playing = players.filter(isFantasyRosterActive);
         const t1P = playing.filter(p => p.team === match.team1_short), t2P = playing.filter(p => p.team === match.team2_short);
         return (<div>
           <div className="tabs" style={{ marginBottom: 12 }}>
@@ -407,12 +422,14 @@ export default function MatchDetail() {
               <span style={{flex:1}}>Player</span>
               {selectionMap.size > 0 && (
                 <div className="md-sel-header-col">
-                  <button className="md-sel-info-btn" onClick={e => { e.stopPropagation(); setShowSelTooltip(t => !t); }}>i</button>
-                  <button className={`md-sort-col-btn ${sortBy==='sel'?'active':''}`} onClick={() => handleSort('sel')}>
+                  <div className="md-sel-tooltip-anchor">
+                    <button type="button" className="md-sel-info-btn" onClick={e => { e.stopPropagation(); setShowSelTooltip(t => !t); }}>i</button>
+                    {showSelTooltip && (<><div className="md-sel-tooltip-backdrop" onClick={() => setShowSelTooltip(false)} /><div className="md-sel-tooltip" role="tooltip"><span className="md-sel-tooltip-line">% of teams in this league that</span><span className="md-sel-tooltip-line">picked this player for this match</span></div></>)}
+                  </div>
+                  <button type="button" className={`md-sort-col-btn ${sortBy==='sel'?'active':''}`} onClick={() => handleSort('sel')}>
                     Sel%
                     <SortIcon active={sortBy==='sel'} dir={sortDir} />
                   </button>
-                  {showSelTooltip && (<><div className="md-sel-tooltip-backdrop" onClick={() => setShowSelTooltip(false)} /><div className="md-sel-tooltip">% of teams in this league that picked this player for this match</div></>)}
                 </div>
               )}
               <button className={`md-sort-col-btn md-stats-pts-header ${sortBy==='pts'?'active':''}`} onClick={() => handleSort('pts')}>
@@ -420,7 +437,17 @@ export default function MatchDetail() {
                 <SortIcon active={sortBy==='pts'} dir={sortDir} />
               </button>
             </div>
-            {sortedFantasyRanked.map(p => <FantasyRow key={p.player_id} p={p} match={match} dimmed={!p.is_playing} selectionPct={selectionMap.get(p.player_id)} inUserTeam={userTeamPlayerIds.has(p.player_id)} onClick={() => p.is_playing && setSelectedPlayer(p)} />)}
+            {sortedFantasyRanked.map(p => (
+                <FantasyRow
+                  key={p.player_id}
+                  p={p}
+                  match={match}
+                  dimmed={!isFantasyRosterActive(p)}
+                  selectionPct={selectionMap.get(p.player_id)}
+                  inUserTeam={userTeamPlayerIds.has(p.player_id)}
+                  onClick={() => isFantasyRosterActive(p) && setSelectedPlayer(p)}
+                />
+              ))}
           </>}
         </div>
       )}
@@ -435,12 +462,12 @@ function PlayerBreakdown({ player, onClose }) {
   const c = { run: 1, four: 4, six: 6, halfCentury: 8, century: 16, duck: -2, wicket: 30, maiden: 12, catch: 8, stumping: 12, runOut: 12, inPlayingXI: 4, dotBall: 1, lbwBowledBonus: 8, threeWicketBonus: 4, fourWicketBonus: 8, fiveWicketBonus: 12, twentyFiveBonus: 4, seventyFiveBonus: 12, threeCatchBonus: 4 };
   const lines = []; let total = 0;
   function add(label, value, pts) { if (pts === 0) return; lines.push({ label, value, pts }); total += pts; }
-  if (p.is_playing) add('Playing XI', '', c.inPlayingXI);
+  if (isFantasyRosterActive(p)) add('Playing XI', '', c.inPlayingXI);
   if (p.runs > 0 || p.balls > 0) { add('Runs', `${p.runs}`, (p.runs||0)*c.run); add('Fours Bonus', `${p.fours||0} x ${c.four}`, (p.fours||0)*c.four); add('Sixes Bonus', `${p.sixes||0} x ${c.six}`, (p.sixes||0)*c.six); if (p.runs>=100) add('Century', '', c.century); else if (p.runs>=75) add('75 Bonus', '', c.seventyFiveBonus); else if (p.runs>=50) add('Half Century', '', c.halfCentury); else if (p.runs>=25) add('25 Bonus', '', c.twentyFiveBonus); if (p.runs===0 && p.balls>0 && ['BAT','WK','AR'].includes(p.role)) add('Duck', '', c.duck); }
   if (p.wickets>0||p.overs_bowled>0) { add('Wickets', `${p.wickets||0} x ${c.wicket}`, (p.wickets||0)*c.wicket); if (p.lbw_bowled_wickets>0) add('LBW/Bowled', `${p.lbw_bowled_wickets} x ${c.lbwBowledBonus}`, p.lbw_bowled_wickets*c.lbwBowledBonus); add('Maidens', `${p.maidens||0} x ${c.maiden}`, (p.maidens||0)*c.maiden); add('Dots', `${p.dots_bowled||0} x ${c.dotBall}`, (p.dots_bowled||0)*c.dotBall); if (p.wickets>=5) add('5W Bonus', '', c.fiveWicketBonus); else if (p.wickets>=4) add('4W Bonus', '', c.fourWicketBonus); else if (p.wickets>=3) add('3W Bonus', '', c.threeWicketBonus); }
   if (p.catches>0) { add('Catches', `${p.catches} x ${c.catch}`, p.catches*c.catch); if (p.catches>=3) add('3 Catch Bonus', '', c.threeCatchBonus); }
   if (p.stumpings>0) add('Stumpings', `${p.stumpings} x ${c.stumping}`, p.stumpings*c.stumping);
-  if (p.run_outs>0) add('Run Outs', `${p.run_outs} x ${c.runOut}`, p.run_outs*c.runOut);
+  if (p.run_outs > 0) add('Run Outs', `${p.run_outs} x ${c.runOut}`, p.run_outs * c.runOut);
   return (<><div className="pb-overlay" onClick={onClose} /><div className="pb-slider">
     <div className="pb-header"><div className="pb-player-info">{p.image_url ? <img className="pb-img" src={p.image_url} alt={p.name} /> : <div className="pb-fb">{p.name.split(' ').map(n=>n[0]).join('').slice(0,2)}</div>}<div><div className="pb-name">{p.name}</div><div className="pb-meta">{p.team} • {p.role}</div></div></div><button className="pb-close" onClick={onClose}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>
     <div className="pb-stats-row">{p.runs>0&&<div className="pb-stat"><span className="pb-stat-val">{p.runs}</span><span className="pb-stat-label">Runs</span></div>}{p.balls>0&&<div className="pb-stat"><span className="pb-stat-val">{p.balls}</span><span className="pb-stat-label">Balls</span></div>}{p.fours>0&&<div className="pb-stat"><span className="pb-stat-val">{p.fours}</span><span className="pb-stat-label">4s</span></div>}{p.sixes>0&&<div className="pb-stat"><span className="pb-stat-val">{p.sixes}</span><span className="pb-stat-label">6s</span></div>}{p.wickets>0&&<div className="pb-stat"><span className="pb-stat-val">{p.wickets}</span><span className="pb-stat-label">Wkts</span></div>}{p.overs_bowled>0&&<div className="pb-stat"><span className="pb-stat-val">{p.overs_bowled}</span><span className="pb-stat-label">Overs</span></div>}{p.catches>0&&<div className="pb-stat"><span className="pb-stat-val">{p.catches}</span><span className="pb-stat-label">Catches</span></div>}</div>
@@ -454,11 +481,11 @@ function SortIcon({ active, dir }) {
 }
 
 function FantasyRow({ p, match, dimmed, selectionPct, inUserTeam, onClick }) {
-  return (<div className={`md-player-row ${inUserTeam ? 'md-player-row-mine' : ''}`} style={{ opacity: dimmed ? 0.35 : 1, cursor: p.is_playing ? 'pointer' : 'default' }} onClick={onClick}>
+  return (<div className={`md-player-row ${inUserTeam ? 'md-player-row-mine' : ''}`} style={{ opacity: dimmed ? 0.35 : 1, cursor: isFantasyRosterActive(p) ? 'pointer' : 'default' }} onClick={onClick}>
     <div className="md-player-left">{p.image_url ? <img src={p.image_url} alt={p.name} className={`md-player-img ${p.isDream?'md-dream-border':''}`} /> : <div className={`avatar md-player-avatar ${p.isDream?'md-dream-border':''}`} style={{ background: p.team===match.team1_short?'var(--blue)':'var(--coral)' }}>{p.name.split(' ').map(n=>n[0]).join('').slice(0,2)}</div>}{p.isDream&&<div className="md-dream-badge"><svg width="10" height="10" viewBox="0 0 24 24" fill="var(--gold)" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>}</div>
     <div className="player-info" style={{ flex: 1 }}><div className="player-name">{p.name}{p.isDream&&<span className="md-dream-tag">Dream XI</span>}</div><div className="player-meta"><span>{p.team}</span><span>•</span><span>{p.role}</span>{p.runs>0&&<span>• {p.runs}({p.balls})</span>}{p.wickets>0&&<span>• {p.wickets}W</span>}{p.catches>0&&<span>• {p.catches}C</span>}</div></div>
     {selectionPct !== undefined && <div className="md-sel-pct">{selectionPct}%</div>}
-    <div className={`md-player-pts ${(p.fantasy_points||0)>50?'high':(p.fantasy_points||0)<0?'neg':''}`}>{p.is_playing?<AnimatedNumber value={p.fantasy_points||0} />:'-'}</div>
+    <div className={`md-player-pts ${(p.fantasy_points||0)>50?'high':(p.fantasy_points||0)<0?'neg':''}`}>{isFantasyRosterActive(p) ? <AnimatedNumber value={p.fantasy_points||0} /> : '-'}</div>
   </div>);
 }
 

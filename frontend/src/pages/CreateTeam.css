@@ -441,8 +441,39 @@
 .ct-list-header-right {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 10px;
   text-align: right;
+}
+
+.ct-list-btn-spacer {
+  width: 32px;
+  flex-shrink: 0;
+}
+
+/* Align Sel% / Cr with row columns */
+.ct-col-sel {
+  width: 36px;
+  flex-shrink: 0;
+  justify-content: center;
+  padding-left: 0;
+  padding-right: 0;
+  font-size: 9px;
+}
+
+.ct-col-cr {
+  width: 48px;
+  flex-shrink: 0;
+  justify-content: center;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.ct-pct-slot {
+  width: 36px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 @keyframes selectFlash {
@@ -508,7 +539,7 @@
 .ct-player-right {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 10px;
   flex-shrink: 0;
 }
 
@@ -628,26 +659,15 @@
   font-size: 12px;
 }
 
-.ct-player-points {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-secondary);
-  width: 64px;
-  flex-shrink: 0;
-  text-align: center;
-}
-
 .ct-player-list .player-credits {
-  width: 64px;
+  width: 48px;
   min-width: unset;
   flex-shrink: 0;
   text-align: center;
+  font-size: 12px;
 }
 
 .ct-list-header-right .ct-col-sort {
-  width: 64px;
-  flex-shrink: 0;
-  justify-content: center;
   padding: 4px 0;
 }
 
@@ -1116,4 +1136,82 @@
   font-size: 8px;
   color: rgba(255, 255, 255, 0.25);
   font-weight: 600;
+}
+
+/* Narrow screens: tighter columns, smaller type, names can use 2 lines */
+@media (max-width: 520px) {
+  .ct-player-list {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .ct-player-right {
+    gap: 5px;
+  }
+
+  .ct-list-header-right {
+    gap: 5px;
+  }
+
+  .ct-pct-slot {
+    width: 30px;
+  }
+
+  .ct-col-sel {
+    width: 30px;
+    font-size: 8px;
+  }
+
+  .ct-col-cr {
+    width: 36px;
+  }
+
+  .ct-player-list .player-credits {
+    width: 36px;
+    font-size: 10px;
+  }
+
+  .ct-pct-badge {
+    font-size: 8px;
+    min-width: 0;
+    padding: 1px 3px;
+  }
+
+  .ct-player-img,
+  .ct-player-avatar {
+    width: 34px;
+    height: 34px;
+  }
+
+  .ct-player-avatar {
+    font-size: 10px;
+  }
+
+  .ct-player-left {
+    gap: 8px;
+  }
+
+  .create-team-page .player-name {
+    font-size: 11px;
+    line-height: 1.25;
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .ct-select-btn {
+    width: 28px;
+    height: 28px;
+  }
+
+  .ct-list-btn-spacer {
+    width: 28px;
+  }
+
+  .ct-list-header-right .ct-col-sort {
+    font-size: 8px;
+    letter-spacing: 0.2px;
+  }
 }
