@@ -36,6 +36,13 @@ function ProtectedRoute({ children }) {
   return children;
 }
 
+function AdminRoute({ children }) {
+  const user = getUser();
+  if (!user) return <Navigate to="/login" replace />;
+  if (!user.is_admin) return <Navigate to="/leagues" replace />;
+  return children;
+}
+
 function AppShell({ children }) {
   return (
     <>
@@ -71,7 +78,7 @@ export default function App() {
           <Route path="/captain-select/:matchId/:leagueId" element={<ProtectedRoute><CaptainSelect /></ProtectedRoute>} />
           <Route path="/team-preview/:teamId" element={<ProtectedRoute><TeamPreview /></ProtectedRoute>} />
           <Route path="/match/:id" element={<ProtectedRoute><AppShell><MatchDetail /></AppShell></ProtectedRoute>} />
-          <Route path="/admin" element={<ProtectedRoute><AppShell><Admin /></AppShell></ProtectedRoute>} />
+          <Route path="/admin" element={<AdminRoute><AppShell><Admin /></AppShell></AdminRoute>} />
           <Route path="/points" element={<ProtectedRoute><PointsSystem /></ProtectedRoute>} />
           <Route path="/feedback" element={<ProtectedRoute><AppShell><Feedback /></AppShell></ProtectedRoute>} />
           <Route path="/leagues/:leagueId/breakdown/:userId" element={<ProtectedRoute><UserBreakdown /></ProtectedRoute>} />

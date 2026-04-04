@@ -13,7 +13,7 @@ export async function loginWithPhone(phone, name) {
   // Check if phone exists
   const { data: existing } = await supabase
     .from('users')
-    .select('id, name, avatar_color, phone, created_at')
+    .select('id, name, avatar_color, phone, created_at, is_admin')
     .eq('phone', trimmed)
     .maybeSingle();
 
@@ -31,7 +31,7 @@ export async function loginWithPhone(phone, name) {
         phone: trimmed,
         avatar_color: color,
       })
-      .select('id, name, avatar_color, phone, created_at')
+      .select('id, name, avatar_color, phone, created_at, is_admin')
       .single();
 
     if (error) {
@@ -75,7 +75,7 @@ export async function linkPhoneToExisting(oldName, oldPassword, phone) {
     .from('users')
     .update({ phone })
     .eq('id', user.id)
-    .select('id, name, avatar_color, phone, created_at')
+    .select('id, name, avatar_color, phone, created_at, is_admin')
     .single();
 
   if (updateErr) throw updateErr;
@@ -101,7 +101,7 @@ export async function linkPhone(userId, phone) {
     .from('users')
     .update({ phone: trimmed })
     .eq('id', userId)
-    .select('id, name, avatar_color, phone, created_at')
+    .select('id, name, avatar_color, phone, created_at, is_admin')
     .single();
 
   if (error) throw error;
@@ -176,7 +176,7 @@ export async function updateProfile(userId, newName, newPassword) {
     .from('users')
     .update({ name: trimmed })
     .eq('id', userId)
-    .select('id, name, avatar_color, phone, created_at')
+    .select('id, name, avatar_color, phone, created_at, is_admin')
     .single();
 
   if (error) throw error;

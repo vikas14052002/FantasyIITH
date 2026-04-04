@@ -209,6 +209,15 @@ export default function Login() {
             <button className="btn btn-primary" type="submit" disabled={phone.length < 10 || loading}>
               {loading ? 'Sending OTP...' : 'GET OTP'}
             </button>
+            {import.meta.env.DEV && (
+              <button type="button" className="btn btn-outline" style={{ marginTop: 8, fontSize: 11 }}
+                onClick={() => {
+                  localStorage.setItem('user', JSON.stringify({ id: 'dev-user', name: 'devuser', avatar_color: '#D91E36', phone: '+910000000000', is_admin: true, created_at: new Date().toISOString() }));
+                  window.location.href = '/leagues';
+                }}>
+                [DEV] Skip Login
+              </button>
+            )}
             <div id="recaptcha-container"></div>
             <p className="login-hint">We'll send you an OTP to verify</p>
           </form>

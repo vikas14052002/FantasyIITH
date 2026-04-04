@@ -16,22 +16,19 @@ export const auth = getAuth(app);
 let recaptchaVerifier = null;
 
 function getRecaptcha() {
-  // Always clear and recreate
   if (recaptchaVerifier) {
     try { recaptchaVerifier.clear(); } catch {}
     recaptchaVerifier = null;
   }
 
-  // Remove old container and create fresh one
+  // Always remove the old element entirely — clearing innerHTML is not enough
+  // because grecaptcha holds an internal widget reference to the element.
   const oldEl = document.getElementById('recaptcha-container');
-  if (oldEl) oldEl.innerHTML = '';
+  if (oldEl) oldEl.remove();
 
-  // If element doesn't exist, create it
-  if (!oldEl) {
-    const el = document.createElement('div');
-    el.id = 'recaptcha-container';
-    document.body.appendChild(el);
-  }
+  const el = document.createElement('div');
+  el.id = 'recaptcha-container';
+  document.body.appendChild(el);
 
   recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
     size: 'invisible',
