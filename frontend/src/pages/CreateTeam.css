@@ -1050,8 +1050,10 @@
 .ct-field-players {
   display: flex;
   justify-content: center;
-  gap: 14px;
-  flex-wrap: nowrap;
+  gap: 8px 14px;
+  flex-wrap: wrap;
+  max-width: 320px;
+  margin: 0 auto;
 }
 
 .ct-field-player {

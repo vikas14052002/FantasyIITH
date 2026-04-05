@@ -10,9 +10,9 @@ import './CreateTeam.css';
 
 const ROLES = ['WK', 'BAT', 'AR', 'BOWL'];
 const ROLE_LABELS = { WK: 'Wicket-Keeper', BAT: 'Batsman', AR: 'All-Rounder', BOWL: 'Bowler' };
-const ROLE_LIMITS = { WK: { min: 1, max: 4 }, BAT: { min: 3, max: 6 }, AR: { min: 1, max: 4 }, BOWL: { min: 3, max: 6 } };
+const ROLE_LIMITS = { WK: { min: 1, max: 11 }, BAT: { min: 1, max: 11 }, AR: { min: 1, max: 11 }, BOWL: { min: 1, max: 11 } };
 const MAX_CREDITS = 100;
-const MAX_PER_TEAM = 7;
+const MAX_PER_TEAM = 10;
 
 // Sort: Playing XI → others. Within each group, by selection % then credits/points
 function sortPlayers(players, sortKey, sortDir, pctMap) {
@@ -571,19 +571,7 @@ export default function CreateTeam() {
         </div>
       )}
 
-      {/* Role validation bar */}
-      <div className="ct-role-bar">
-        {ROLES.map(role => (
-          <div key={role} className={`ct-role-chip ${roleCounts[role] >= ROLE_LIMITS[role].min ? 'valid' : ''} ${roleCounts[role] >= ROLE_LIMITS[role].max ? 'maxed' : ''}`}>
-            <span className="ct-role-chip-icon">
-              {roleCounts[role] >= ROLE_LIMITS[role].min ? (
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
-              ) : null}
-            </span>
-            {role} {roleCounts[role]}/{ROLE_LIMITS[role].min}-{ROLE_LIMITS[role].max}
-          </div>
-        ))}
-      </div>
+      {/* Role validation bar - removed, rules simplified */}
 
       {/* View toggle — only show when lineup is announced */}
       {hasPlayingXI && (
@@ -737,7 +725,7 @@ export default function CreateTeam() {
                         {rolePlayers.length === 0 ? (
                           <div className="ct-field-empty-slot">
                             <div className="ct-field-empty-dot">?</div>
-                            <span className="ct-field-empty-label">Pick {ROLE_LIMITS[role].min}+</span>
+                            <span className="ct-field-empty-label">Pick 1+</span>
                           </div>
                         ) : rolePlayers.map(p => (
                           <div key={p.player_id} className="ct-field-player">

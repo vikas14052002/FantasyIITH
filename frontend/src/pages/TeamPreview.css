@@ -218,8 +218,10 @@
 .preview-players-row {
   display: flex;
   justify-content: center;
-  gap: 16px;
-  flex-wrap: nowrap;
+  gap: 10px 14px;
+  flex-wrap: wrap;
+  max-width: 310px;
+  margin: 0 auto;
 }
 
 /* Individual player */
