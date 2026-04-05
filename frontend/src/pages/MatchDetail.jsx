@@ -289,8 +289,8 @@ export default function MatchDetail() {
           {leagues.length > 1 && <select className="input" value={selectedLeague} onChange={e => { setSelectedLeague(e.target.value); localStorage.setItem(`md_league_${id}`, e.target.value); setCompareMode(false); setComparison(null); setCompareWith(null); }} style={{ marginBottom: 12 }}>{leagues.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</select>}
           {leaderboard.length === 0 ? <div className="empty"><div className="empty-icon">📊</div><p className="empty-text">No teams yet</p></div> : (
             <div className="md-lb">
-              <div className="md-lb-header"><span>#</span><span style={{ flex: 1 }}>Player</span><div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span>Points</span>{matchStarted && <button className={`md-compare-icon-btn ${compareMode ? 'active' : ''}`} onClick={toggleCompareMode}>{compareMode ? <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> : <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M8 3L4 7l4 4"/><path d="M4 7h16"/><path d="M16 21l4-4-4-4"/><path d="M20 17H4"/></svg>}</button>}</div></div>
-              {compareMode && <div className="md-compare-hint">Tap a player to compare your team with theirs</div>}
+              <div className="md-lb-header"><span>#</span><span style={{ flex: 1 }}>Player</span>{matchStarted && <button className={`md-compare-icon-btn ${compareMode ? 'active' : ''}`} onClick={toggleCompareMode}>{compareMode ? 'Cancel' : 'Compare'}</button>}<span>Points</span></div>
+              {compareMode && <div className="md-compare-hint">Tap any player to compare their team with yours</div>}
               {leaderboard.map((m, i) => {
                 const rank = i + 1, isMe = m.id === user?.id, canView = matchStarted && m.team;
                 const isCompleted = match.status === 'completed';
