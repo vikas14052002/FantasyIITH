@@ -211,11 +211,20 @@ export default function Login() {
             </button>
             {import.meta.env.DEV && (
               <button type="button" className="btn btn-outline" style={{ marginTop: 8, fontSize: 11 }}
-                onClick={() => {
-                  localStorage.setItem('user', JSON.stringify({ id: 'dev-user', name: 'devuser', avatar_color: '#D91E36', phone: '+910000000000', is_admin: true, created_at: new Date().toISOString() }));
-                  window.location.href = '/leagues';
+                onClick={async () => {
+                  if (!phone || phone.length < 10) { setError('Enter your phone number first'); return; }
+                  setLoading(true);
+                  setError('');
+                  try {
+                    await loginWithPhone(`+91${phone}`);
+                    window.location.href = '/leagues';
+                  } catch (err) {
+                    setError(err.message || 'Dev login failed');
+                  } finally {
+                    setLoading(false);
+                  }
                 }}>
-                [DEV] Skip Login
+                [DEV] Skip OTP
               </button>
             )}
             <div id="recaptcha-container"></div>

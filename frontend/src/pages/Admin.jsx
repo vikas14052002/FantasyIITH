@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 
 const FUNCTIONS_URL = 'https://ywqmhwgkctmetzsdburj.supabase.co/functions/v1';
@@ -237,59 +237,185 @@ function SyncTab({ matches, onMatchesChange }) {
 
 // ─── Lineup Tab ───────────────────────────────────────────────────────────────
 
+// Per-team draggable XI + squad picker
+function TeamLineup({ team, players, xi, onXiChange }) {
+  const dragRef = useRef(null);
+
+  const squad = players.filter(p => !xi.find(x => x.id === p.id));
+
+  function startDrag(e, idx) {
+    dragRef.current = idx;
+    e.dataTransfer.effectAllowed = 'move';
+  }
+
+  function onDragOver(e, idx) {
+    e.preventDefault();
+    const from = dragRef.current;
+    if (from === null || from === idx) return;
+    const next = [...xi];
+    const [moved] = next.splice(from, 1);
+    next.splice(idx, 0, moved);
+    dragRef.current = idx;
+    onXiChange(next);
+  }
+
+  function addToXI(p) {
+    if (xi.length >= 16) return;
+    onXiChange([...xi, { ...p, is_impact_sub: false }]);
+  }
+
+  function removeFromXI(id) {
+    onXiChange(xi.filter(x => x.id !== id));
+  }
+
+  function toggleImpact(id) {
+    onXiChange(xi.map(x => x.id === id ? { ...x, is_impact_sub: !x.is_impact_sub } : x));
+  }
+
+  return (
+    <div style={{ marginBottom: 20 }}>
+      {/* Team label */}
+      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 8 }}>
+        {team} — {xi.length}/16
+      </div>
+
+      {/* Draggable XI list */}
+      {xi.length > 0 && (
+        <div style={{ marginBottom: 10, border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
+          {xi.map((p, idx) => (
+            <div
+              key={p.id}
+              draggable
+              onDragStart={e => startDrag(e, idx)}
+              onDragOver={e => onDragOver(e, idx)}
+              onDragEnd={() => { dragRef.current = null; }}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px',
+                borderBottom: idx < xi.length - 1 ? '1px solid var(--border)' : 'none',
+                background: p.is_impact_sub ? 'rgba(156,39,176,0.06)' : 'var(--bg-elevated)',
+                cursor: 'grab', userSelect: 'none',
+              }}
+            >
+              {/* Drag handle */}
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--text-muted)', flexShrink: 0 }}>
+                <line x1="4" y1="8" x2="20" y2="8"/><line x1="4" y1="16" x2="20" y2="16"/>
+              </svg>
+              {/* Order badge */}
+              <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', width: 16, textAlign: 'center', flexShrink: 0 }}>{idx + 1}</span>
+              {/* Name + role */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</div>
+                <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>{p.role}</div>
+              </div>
+              {/* Impact toggle */}
+              <button
+                onClick={() => toggleImpact(p.id)}
+                style={{
+                  fontSize: 9, fontWeight: 700, padding: '3px 8px', borderRadius: 6, border: 'none', cursor: 'pointer',
+                  background: p.is_impact_sub ? 'rgba(156,39,176,0.2)' : 'var(--bg-elevated)',
+                  color: p.is_impact_sub ? '#9C27B0' : 'var(--text-muted)',
+                  border: `1px solid ${p.is_impact_sub ? 'rgba(156,39,176,0.4)' : 'var(--border)'}`,
+                }}
+              >
+                IMPACT
+              </button>
+              {/* Remove */}
+              <button onClick={() => removeFromXI(p.id)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 2, display: 'flex' }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Squad — tap to add */}
+      {squad.length > 0 && (
+        <>
+          <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 6 }}>Squad</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {squad.map(p => (
+              <div key={p.id}
+                onClick={() => addToXI(p)}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)',
+                  cursor: xi.length >= 16 ? 'not-allowed' : 'pointer',
+                  opacity: xi.length >= 16 ? 0.4 : 0.7,
+                  background: 'transparent',
+                }}
+              >
+                <div>
+                  <span style={{ fontSize: 13 }}>{p.name}</span>
+                  <span style={{ fontSize: 10, color: 'var(--text-muted)', marginLeft: 6 }}>{p.role}</span>
+                </div>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ color: 'var(--green)' }}><path d="M12 5v14M5 12h14"/></svg>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 function LineupTab({ matches }) {
   const [matchId, setMatchId] = useState('');
   const [players, setPlayers] = useState([]);
-  const [overrides, setOverrides] = useState({});
-  const [search, setSearch] = useState('');
+  // xi: { [team]: [{id, name, role, is_impact_sub, ...}] }
+  const [xi, setXi] = useState({});
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
+
+  const teams = [...new Set(players.map(p => p.team))];
+  const totalXI = Object.values(xi).reduce((s, arr) => s + arr.length, 0);
 
   async function loadPlayers(mid) {
     setMatchId(mid);
     setMsg('');
-    if (!mid) { setPlayers([]); setOverrides({}); return; }
+    if (!mid) { setPlayers([]); setXi({}); return; }
     const { data } = await supabase
       .from('match_players')
       .select('id, name, team, role, is_playing, is_impact_sub, batting_order')
-      .eq('match_id', mid)
-      .order('team').order('batting_order', { ascending: true, nullsFirst: false });
+      .eq('match_id', mid);
     const list = data || [];
     setPlayers(list);
-    const init = {};
-    for (const p of list) {
-      init[p.id] = { is_playing: p.is_playing ?? false, batting_order: p.batting_order ?? '', is_impact_sub: p.is_impact_sub ?? false };
+
+    // Seed XI from current DB state — ordered by batting_order
+    const initXi = {};
+    for (const team of [...new Set(list.map(p => p.team))]) {
+      initXi[team] = list
+        .filter(p => p.team === team && p.is_playing)
+        .sort((a, b) => (a.batting_order || 99) - (b.batting_order || 99))
+        .map(p => ({ ...p }));
     }
-    setOverrides(init);
+    setXi(initXi);
   }
-
-  function setField(id, field, val) {
-    setOverrides(o => ({ ...o, [id]: { ...o[id], [field]: val } }));
-  }
-
-  const playingCount = Object.values(overrides).filter(o => o.is_playing).length;
-
-  const filtered = players.filter(p =>
-    !search || p.name.toLowerCase().includes(search.toLowerCase()) || p.team.toLowerCase().includes(search.toLowerCase())
-  );
-
-  // Group by team
-  const teams = [...new Set(filtered.map(p => p.team))];
 
   async function saveLineup() {
     setSaving(true);
     setMsg('');
     try {
+      // Build a map of all updates
+      const updates = {};
       for (const p of players) {
-        const o = overrides[p.id];
-        if (!o) continue;
-        await supabase.from('match_players').update({
-          is_playing: o.is_playing,
-          is_impact_sub: o.is_impact_sub,
-          batting_order: o.batting_order === '' ? null : parseInt(o.batting_order) || null,
-        }).eq('id', p.id);
+        updates[p.id] = { is_playing: false, is_impact_sub: false, batting_order: 0 };
       }
-      setMsg('Lineup saved successfully!');
+      for (const arr of Object.values(xi)) {
+        arr.forEach((p, idx) => {
+          updates[p.id] = { is_playing: true, is_impact_sub: p.is_impact_sub ?? false, batting_order: idx + 1 };
+        });
+      }
+
+      for (const [id, vals] of Object.entries(updates)) {
+        const { error } = await supabase.from('match_players').update(vals).eq('id', id);
+        if (error) throw new Error(error.message);
+      }
+
+      // Mark lineups_synced on the match
+      await supabase.from('matches').update({ lineups_synced: true }).eq('id', matchId);
+
+      setMsg('Lineup saved!');
     } catch (err) {
       setMsg('Error: ' + err.message);
     }
@@ -304,80 +430,27 @@ function LineupTab({ matches }) {
 
         {players.length > 0 && (
           <>
-            <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 12 }}>
-              <input className="input" placeholder="Search player or team…" value={search}
-                onChange={e => setSearch(e.target.value)} style={{ flex: 1, minHeight: 40 }} />
-              <div style={{
-                padding: '6px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap',
-                background: playingCount === 11 ? 'rgba(76,175,80,0.15)' : 'var(--bg-elevated)',
-                color: playingCount === 11 ? 'var(--green)' : 'var(--text-secondary)',
-              }}>
-                {playingCount}/11
-              </div>
-            </div>
-
-            {/* Column headers */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 36px 52px 52px', gap: 8, paddingBottom: 6, borderBottom: '1px solid var(--border)', marginBottom: 4 }}>
-              <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>Player</span>
-              <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.6px', textAlign: 'center' }}>XI</span>
-              <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.6px', textAlign: 'center' }}>Order</span>
-              <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.6px', textAlign: 'center' }}>Impact</span>
+            <div style={{
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16,
+              padding: '8px 12px', borderRadius: 10, background: 'var(--bg-elevated)',
+            }}>
+              <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Total selected</span>
+              <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
+                {totalXI}
+              </span>
             </div>
 
             {teams.map(team => (
-              <div key={team}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '1px', padding: '10px 0 6px' }}>
-                  {team}
-                </div>
-                {filtered.filter(p => p.team === team).map(p => {
-                  const o = overrides[p.id] || {};
-                  return (
-                    <div key={p.id} style={{
-                      display: 'grid', gridTemplateColumns: '1fr 36px 52px 52px', gap: 8,
-                      padding: '8px 0', borderBottom: '1px solid var(--border)',
-                      opacity: (!o.is_playing && !o.is_impact_sub) ? 0.45 : 1,
-                      transition: 'opacity 0.15s',
-                    }}>
-                      <div>
-                        <div style={{ fontSize: 13, fontWeight: o.is_playing ? 600 : 400 }}>{p.name}</div>
-                        <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>{p.role}</div>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <input type="checkbox" checked={o.is_playing ?? false}
-                          onChange={e => {
-                            const checked = e.target.checked;
-                            if (checked && playingCount >= 11 && !o.is_playing) return;
-                            setField(p.id, 'is_playing', checked);
-                            if (!checked) setField(p.id, 'batting_order', '');
-                          }}
-                          style={{ width: 18, height: 18, cursor: 'pointer', accentColor: 'var(--red-primary)' }}
-                        />
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <input type="number" min="1" max="11" placeholder="—" value={o.batting_order ?? ''}
-                          onChange={e => setField(p.id, 'batting_order', e.target.value)}
-                          disabled={!o.is_playing}
-                          style={{
-                            width: 46, padding: '5px 4px', fontSize: 12, textAlign: 'center',
-                            background: 'var(--bg-elevated)', border: '1px solid var(--border)',
-                            borderRadius: 8, color: 'var(--text-primary)', fontFamily: 'Poppins, sans-serif',
-                            opacity: o.is_playing ? 1 : 0.3,
-                          }}
-                        />
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <input type="checkbox" checked={o.is_impact_sub ?? false}
-                          onChange={e => setField(p.id, 'is_impact_sub', e.target.checked)}
-                          style={{ width: 18, height: 18, cursor: 'pointer', accentColor: '#9C27B0' }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+              <TeamLineup
+                key={team}
+                team={team}
+                players={players.filter(p => p.team === team)}
+                xi={xi[team] || []}
+                onXiChange={arr => setXi(x => ({ ...x, [team]: arr }))}
+              />
             ))}
 
-            <button className="btn btn-primary" onClick={saveLineup} disabled={saving} style={{ marginTop: 16, minHeight: 48 }}>
+            <button className="btn btn-primary" onClick={saveLineup} disabled={saving} style={{ minHeight: 48 }}>
               {saving ? 'Saving…' : 'Save Lineup'}
             </button>
             <StatusMsg msg={msg} />

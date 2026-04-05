@@ -697,9 +697,6 @@
   color: var(--text-secondary);
   border-top: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
-  position: sticky;
-  top: 0;
-  z-index: 1;
 }
 
 .ct-section-impact {
@@ -917,7 +914,7 @@
   min-width: 0;
 }
 .ct-lu-name {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--text-primary);
   white-space: nowrap;
@@ -930,6 +927,28 @@
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.3px;
+}
+
+/* ── Lineup section labels ── */
+.ct-lu-section-label {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  padding: 4px 8px;
+  color: var(--green);
+  background: rgba(76, 175, 80, 0.07);
+  border-bottom: 1px solid rgba(76, 175, 80, 0.15);
+}
+.ct-lu-section-impact {
+  color: #9C27B0;
+  background: rgba(156, 39, 176, 0.07);
+  border-bottom-color: rgba(156, 39, 176, 0.15);
+}
+.ct-lu-section-others {
+  color: var(--text-muted);
+  background: transparent;
+  border-bottom-color: var(--border);
 }
 
 /* ── Full-screen Field Preview ── */

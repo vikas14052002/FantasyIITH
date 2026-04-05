@@ -315,9 +315,8 @@ export default function CreateTeam() {
     const team1 = match?.team1_short;
     const team2 = match?.team2_short;
 
-    // All players from both teams, split by team, sorted by batting_order (0 = bench → last)
-    function teamPlayers(teamShort) {
-      return [...players.filter(p => p.team === teamShort)].sort((a, b) => {
+    function sortByOrder(arr) {
+      return [...arr].sort((a, b) => {
         const ao = a.batting_order || 0;
         const bo = b.batting_order || 0;
         if (ao === 0 && bo === 0) return 0;
@@ -325,6 +324,16 @@ export default function CreateTeam() {
         if (bo === 0) return -1;
         return ao - bo;
       });
+    }
+
+    // All players from both teams, split by team, segmented by status
+    function teamSections(teamShort) {
+      const all = players.filter(p => p.team === teamShort);
+      return {
+        xi:     sortByOrder(all.filter(p => p.is_playing && !p.is_impact_sub)),
+        impact: all.filter(p => p.is_impact_sub),
+        others: all.filter(p => !p.is_playing && !p.is_impact_sub),
+      };
     }
 
     function renderLineupPlayer(player) {
@@ -339,8 +348,8 @@ export default function CreateTeam() {
         >
           <span className="ct-lu-order">{order > 0 ? order : '·'}</span>
           <div className="ct-lu-info">
-            <span className="ct-lu-name">{player.name.split(' ').slice(-1)[0]}</span>
-            <span className="ct-lu-role">{player.role}{player.is_impact_sub ? ' ★' : ''}</span>
+            <span className="ct-lu-name">{player.name}</span>
+            <span className="ct-lu-role">{player.role}</span>
           </div>
           <div className={`ct-select-btn ${isSelected ? 'active' : ''}`}
             style={{ width: 24, height: 24, minWidth: 24 }}>
@@ -354,26 +363,43 @@ export default function CreateTeam() {
       );
     }
 
-    const t1Players = teamPlayers(team1);
-    const t2Players = teamPlayers(team2);
+    const s1 = teamSections(team1);
+    const s2 = teamSections(team2);
+
+    function renderTeamCol(teamShort, sections) {
+      return (
+        <div className="ct-lineup-col">
+          <div className="ct-lineup-col-header">
+            {getTeamLogo(teamShort) && <img src={getTeamLogo(teamShort)} alt="" className="ct-lineup-logo" />}
+            <span>{teamShort}</span>
+          </div>
+          {sections.xi.length > 0 && (
+            <>
+              <div className="ct-lu-section-label">Playing XI</div>
+              {sections.xi.map(renderLineupPlayer)}
+            </>
+          )}
+          {sections.impact.length > 0 && (
+            <>
+              <div className="ct-lu-section-label ct-lu-section-impact">Impact Sub</div>
+              {sections.impact.map(renderLineupPlayer)}
+            </>
+          )}
+          {sections.others.length > 0 && (
+            <>
+              <div className="ct-lu-section-label ct-lu-section-others">Others</div>
+              {sections.others.map(renderLineupPlayer)}
+            </>
+          )}
+        </div>
+      );
+    }
 
     return (
       <div className="ct-lineup-view">
-        <div className="ct-lineup-col">
-          <div className="ct-lineup-col-header">
-            {getTeamLogo(team1) && <img src={getTeamLogo(team1)} alt="" className="ct-lineup-logo" />}
-            <span>{team1}</span>
-          </div>
-          {t1Players.map(renderLineupPlayer)}
-        </div>
+        {renderTeamCol(team1, s1)}
         <div className="ct-lineup-divider" />
-        <div className="ct-lineup-col">
-          <div className="ct-lineup-col-header">
-            {getTeamLogo(team2) && <img src={getTeamLogo(team2)} alt="" className="ct-lineup-logo" />}
-            <span>{team2}</span>
-          </div>
-          {t2Players.map(renderLineupPlayer)}
-        </div>
+        {renderTeamCol(team2, s2)}
       </div>
     );
   }
