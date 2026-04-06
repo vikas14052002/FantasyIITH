@@ -5,6 +5,7 @@ import { getUser } from '../lib/auth';
 import { hasMatchStarted } from '../lib/matchLock';
 import ShareSheet from '../components/ShareSheet';
 import { MatchDetailSkeleton } from '../components/Skeleton';
+import PlayerBreakdown from '../components/PlayerBreakdown';
 import './TeamPreview.css';
 
 const ROLE_ORDER = { WK: 0, BAT: 1, AR: 2, BOWL: 3 };
@@ -14,10 +15,12 @@ export default function TeamPreview() {
   const { teamId } = useParams();
   const [team, setTeam] = useState(null);
   const [players, setPlayers] = useState([]);
+  const [matchPlayersMap, setMatchPlayersMap] = useState(new Map());
   const [dreamIds, setDreamIds] = useState(new Set());
   const [loading, setLoading] = useState(true);
   const [showBench, setShowBench] = useState(false);
   const [showShare, setShowShare] = useState(false);
+  const [selectedPlayer, setSelectedPlayer] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
   const user = getUser();
@@ -41,6 +44,17 @@ export default function TeamPreview() {
     });
 
     setPlayers(securedPlayers || []);
+
+    // Fetch match_players stats for the breakdown panel
+    if (teamData.match_id) {
+      const { data: mpData } = await supabase
+        .from('match_players')
+        .select('*')
+        .eq('match_id', teamData.match_id);
+      if (mpData) {
+        setMatchPlayersMap(new Map(mpData.map(mp => [mp.player_id, mp])));
+      }
+    }
 
     // Compute dream team (top 11 by fantasy_points) for completed matches
     if (teamData.matches?.status === 'completed' && teamData.match_id) {
@@ -186,7 +200,7 @@ export default function TeamPreview() {
                     const isDream = dreamIds.has(p.player_id);
 
                     return (
-                      <div key={p.player_id} className="preview-player">
+                      <div key={p.player_id} className="preview-player" onClick={() => setSelectedPlayer({ ...matchPlayersMap.get(p.player_id), ...p, fantasy_points: pts })} style={{ cursor: 'pointer' }}>
                         {/* Player photo */}
                         <div className="preview-avatar-wrap">
                           {img ? (
@@ -276,6 +290,9 @@ export default function TeamPreview() {
           onClose={() => setShowShare(false)}
         />
       )}
+
+      {/* Player breakdown */}
+      {selectedPlayer && <PlayerBreakdown player={selectedPlayer} onClose={() => setSelectedPlayer(null)} />}
 
       {/* Fixed bottom actions */}
       <div className="preview-bottom">

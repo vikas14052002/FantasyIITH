@@ -322,6 +322,11 @@
   margin-bottom: 0;
 }
 
+.ct-tabs .tab {
+  font-size: 11px;
+  padding: 10px 0;
+}
+
 /* ── Toolbar: Search + Sort + Team Filter ── */
 .ct-toolbar {
   padding: 10px 16px;
@@ -656,7 +661,11 @@
 }
 
 .player-name {
-  font-size: 12px;
+  font-size: 10px;
+}
+
+.ct-player-list .player-meta {
+  font-size: 8.5px;
 }
 
 .ct-player-list .player-credits {
@@ -664,7 +673,7 @@
   min-width: unset;
   flex-shrink: 0;
   text-align: center;
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .ct-list-header-right .ct-col-sort {
@@ -843,6 +852,7 @@
   overflow-y: auto;
   gap: 0;
   padding: 0 0 80px;
+  font-size: 90%;
 }
 .ct-lineup-col {
   flex: 1;
@@ -880,7 +890,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 7px 8px;
+  padding: 6px 8px;
   border-bottom: 1px solid var(--border);
   cursor: pointer;
   transition: background 0.12s;
@@ -914,7 +924,7 @@
   min-width: 0;
 }
 .ct-lu-name {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
   color: var(--text-primary);
   white-space: nowrap;
@@ -922,7 +932,7 @@
   text-overflow: ellipsis;
 }
 .ct-lu-role {
-  font-size: 9px;
+  font-size: 8.5px;
   font-weight: 600;
   color: var(--text-muted);
   text-transform: uppercase;
@@ -931,21 +941,24 @@
 
 /* ── Lineup section labels ── */
 .ct-lu-section-label {
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.6px;
-  padding: 4px 8px;
+  padding: 5px 8px 4px;
+  margin-top: 0;
   color: var(--green);
   background: rgba(76, 175, 80, 0.07);
   border-bottom: 1px solid rgba(76, 175, 80, 0.15);
 }
 .ct-lu-section-impact {
+  margin-top: 24px;
   color: #9C27B0;
   background: rgba(156, 39, 176, 0.07);
   border-bottom-color: rgba(156, 39, 176, 0.15);
 }
 .ct-lu-section-others {
+  margin-top: 24px;
   color: var(--text-muted);
   background: transparent;
   border-bottom-color: var(--border);
@@ -1213,7 +1226,7 @@
   }
 
   .create-team-page .player-name {
-    font-size: 11px;
+    font-size: 10px;
     line-height: 1.25;
     white-space: normal;
     display: -webkit-box;

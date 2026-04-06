@@ -240,8 +240,12 @@ function SyncTab({ matches, onMatchesChange }) {
 // Per-team draggable XI + squad picker
 function TeamLineup({ team, players, xi, onXiChange }) {
   const dragRef = useRef(null);
+  const [search, setSearch] = useState('');
 
   const squad = players.filter(p => !xi.find(x => x.id === p.id));
+  const filteredSquad = search.trim()
+    ? squad.filter(p => p.name.toLowerCase().includes(search.trim().toLowerCase()))
+    : squad;
 
   function startDrag(e, idx) {
     dragRef.current = idx;
@@ -333,8 +337,15 @@ function TeamLineup({ team, players, xi, onXiChange }) {
       {squad.length > 0 && (
         <>
           <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 6 }}>Squad</div>
+          <input
+            className="input"
+            placeholder="Search players…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            style={{ marginBottom: 8, fontSize: 13 }}
+          />
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            {squad.map(p => (
+            {filteredSquad.map(p => (
               <div key={p.id}
                 onClick={() => addToXI(p)}
                 style={{
@@ -366,20 +377,37 @@ function LineupTab({ matches }) {
   const [xi, setXi] = useState({});
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
+  const [tossTeam, setTossTeam] = useState('');
+  const [tossChoice, setTossChoice] = useState('bat');
+  const [tossSaving, setTossSaving] = useState(false);
+  const [tossMsg, setTossMsg] = useState('');
 
+  const selectedMatch = matches.find(m => m.id === matchId);
+  const teamOptions = selectedMatch ? [selectedMatch.team1_short, selectedMatch.team2_short] : [];
   const teams = [...new Set(players.map(p => p.team))];
   const totalXI = Object.values(xi).reduce((s, arr) => s + arr.length, 0);
 
   async function loadPlayers(mid) {
     setMatchId(mid);
     setMsg('');
-    if (!mid) { setPlayers([]); setXi({}); return; }
-    const { data } = await supabase
-      .from('match_players')
-      .select('id, name, team, role, is_playing, is_impact_sub, batting_order')
-      .eq('match_id', mid);
+    setTossMsg('');
+    if (!mid) { setPlayers([]); setXi({}); setTossTeam(''); return; }
+    const [{ data }, { data: matchData }] = await Promise.all([
+      supabase.from('match_players').select('id, name, team, role, is_playing, is_impact_sub, batting_order').eq('match_id', mid),
+      supabase.from('matches').select('result, team1_short, team2_short').eq('id', mid).single(),
+    ]);
     const list = data || [];
     setPlayers(list);
+
+    // Seed toss from current result if it exists
+    if (matchData?.result) {
+      const t1 = matchData.team1_short, t2 = matchData.team2_short;
+      if (matchData.result.startsWith(t1)) { setTossTeam(t1); }
+      else if (matchData.result.startsWith(t2)) { setTossTeam(t2); }
+      setTossChoice(matchData.result.includes('field') ? 'field' : 'bat');
+    } else {
+      setTossTeam(matchData?.team1_short || '');
+    }
 
     // Seed XI from current DB state — ordered by batting_order
     const initXi = {};
@@ -390,6 +418,21 @@ function LineupTab({ matches }) {
         .map(p => ({ ...p }));
     }
     setXi(initXi);
+  }
+
+  async function saveToss() {
+    if (!matchId || !tossTeam) return;
+    setTossSaving(true);
+    setTossMsg('');
+    try {
+      const result = `${tossTeam} elected to ${tossChoice}`;
+      const { error } = await supabase.from('matches').update({ result }).eq('id', matchId);
+      if (error) throw error;
+      setTossMsg(`Saved: "${result}"`);
+    } catch (err) {
+      setTossMsg('Error: ' + err.message);
+    }
+    setTossSaving(false);
   }
 
   async function saveLineup() {
@@ -413,7 +456,7 @@ function LineupTab({ matches }) {
       }
 
       // Mark lineups_synced on the match
-      await supabase.from('matches').update({ lineups_synced: true }).eq('id', matchId);
+      await supabase.from('matches').update({ lineups_synced: totalXI > 0 }).eq('id', matchId);
 
       setMsg('Lineup saved!');
     } catch (err) {
@@ -424,9 +467,44 @@ function LineupTab({ matches }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+
+      {/* Toss */}
+      <div className="card">
+        <SectionTitle>Toss Result</SectionTitle>
+        <MatchSelect matches={matches} value={matchId} onChange={loadPlayers} />
+        {matchId && teamOptions.length > 0 && (
+          <>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+              <select className="input" value={tossTeam} onChange={e => setTossTeam(e.target.value)}>
+                {teamOptions.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+              <select className="input" value={tossChoice} onChange={e => setTossChoice(e.target.value)}>
+                <option value="bat">elected to bat</option>
+                <option value="field">elected to field</option>
+              </select>
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 10, padding: '8px 12px', background: 'var(--bg-elevated)', borderRadius: 8 }}>
+              Preview: <strong style={{ color: 'var(--text-primary)' }}>{tossTeam} elected to {tossChoice}</strong>
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button className="btn btn-primary" onClick={saveToss} disabled={tossSaving} style={{ minHeight: 44, flex: 1 }}>
+                {tossSaving ? 'Saving…' : 'Save Toss'}
+              </button>
+              <SmallBtn label="Remove Toss" danger onClick={async () => {
+                setTossSaving(true); setTossMsg('');
+                const { error } = await supabase.from('matches').update({ result: null }).eq('id', matchId);
+                setTossMsg(error ? 'Error: ' + error.message : 'Toss removed');
+                setTossSaving(false);
+              }} disabled={tossSaving} />
+            </div>
+            <StatusMsg msg={tossMsg} />
+          </>
+        )}
+      </div>
+
+      {/* Lineup */}
       <div className="card">
         <SectionTitle>Manual Lineup</SectionTitle>
-        <MatchSelect matches={matches} value={matchId} onChange={loadPlayers} />
 
         {players.length > 0 && (
           <>

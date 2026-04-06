@@ -42,7 +42,6 @@ export default function CreateTeam() {
   const [isEditing, setIsEditing] = useState(false);
   const [existingCaptainId, setExistingCaptainId] = useState(null);
   const [existingVcId, setExistingVcId] = useState(null);
-  const [search, setSearch] = useState('');
   const [sortKey, setSortKey] = useState('credits');
   const [sortDir, setSortDir] = useState('desc');
   const [showSelectedStrip, setShowSelectedStrip] = useState(false);
@@ -249,13 +248,9 @@ export default function CreateTeam() {
   }
 
   const filteredPlayers = useMemo(() => {
-    let list = players.filter(p => p.role === activeRole);
-    if (search.trim()) {
-      const q = search.toLowerCase().trim();
-      list = list.filter(p => p.name.toLowerCase().includes(q));
-    }
+    const list = players.filter(p => p.role === activeRole);
     return sortPlayers(list, sortKey, sortDir, selectionPct);
-  }, [players, activeRole, search, sortKey, sortDir, selectionPct]);
+  }, [players, activeRole, sortKey, sortDir, selectionPct]);
 
 
   // Detect squad announcement from actual player data, not lineups_synced flag
@@ -559,6 +554,19 @@ export default function CreateTeam() {
         </div>
       </div>
 
+      {/* Toss result banner */}
+      {match?.result && (
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+          padding: '6px 14px', margin: '0 16px',
+          background: 'var(--bg-elevated)', border: '1px solid var(--border)',
+          borderRadius: 8, fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)',
+        }}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2" stroke="white" strokeWidth="2" strokeLinecap="round" fill="none"/></svg>
+          {match.result}
+        </div>
+      )}
+
       {/* Player slot boxes */}
       <div className="d11-slots">
         {Array.from({ length: 11 }).map((_, i) => (
@@ -628,27 +636,6 @@ export default function CreateTeam() {
       </div>
       )}
 
-      {/* Search — hidden in lineup mode */}
-      {viewMode === 'roles' && (
-      <div className="ct-toolbar">
-        <div className="ct-search">
-          <svg className="ct-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-          <input
-            type="text"
-            className="ct-search-input"
-            placeholder={`Search ${ROLE_LABELS[activeRole]}s...`}
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
-          {search && (
-            <button className="ct-search-clear" onClick={() => setSearch('')}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
-            </button>
-          )}
-        </div>
-      </div>
-      )}
-
       {/* Lineup view — shown when lineup mode is active and XI is announced */}
       {viewMode === 'lineup' && hasPlayingXI && renderLineupView()}
 
@@ -670,7 +657,7 @@ export default function CreateTeam() {
         </div>
         {filteredPlayers.length === 0 && (
           <div className="ct-empty">
-            <span className="ct-empty-text">{search ? 'No players match your search' : 'No players available'}</span>
+            <span className="ct-empty-text">No players available</span>
           </div>
         )}
         {hasPlayingXI ? (

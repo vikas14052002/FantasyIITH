@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { getUser } from '../lib/auth';
@@ -7,6 +7,7 @@ import { isFantasyRosterActive } from '../lib/matchPlayers';
 import { hasMatchStarted } from '../lib/matchLock';
 import AnimatedNumber from '../components/AnimatedNumber';
 import { MatchDetailSkeleton } from '../components/Skeleton';
+import PlayerBreakdown from '../components/PlayerBreakdown';
 import './MatchDetail.css';
 import './TeamCompare.css';
 
@@ -30,10 +31,13 @@ export default function MatchDetail() {
   const [comparing, setComparing] = useState(false);
   const [comparison, setComparison] = useState(null);
   const [selectionMap, setSelectionMap] = useState(new Map());
-  const [showSelTooltip, setShowSelTooltip] = useState(false);
+  const [showLeagueStatsTooltip, setShowLeagueStatsTooltip] = useState(false);
   const [userTeamPlayerIds, setUserTeamPlayerIds] = useState(new Set());
   const [sortBy, setSortBy] = useState('pts');
   const [sortDir, setSortDir] = useState('desc');
+  const [captainMap, setCaptainMap] = useState(new Map());
+  const [vcMap, setVcMap] = useState(new Map());
+  const swipeStartX = useRef(null);
 
   useEffect(() => { loadMatch(); }, [id]);
   useEffect(() => { if (selectedLeague) loadLeagueData(); }, [selectedLeague]);
@@ -108,14 +112,28 @@ export default function MatchDetail() {
     const teams = teamsRes.data || [];
     setLeagueTeams(teams);
     setLeagueMembers((membersRes.data || []).map(m => m.users));
-    if (teams.length > 0) {
+    // Never expose other users' selections before match starts
+    const started = match && hasMatchStarted(match);
+    if (teams.length > 0 && started) {
       const teamIds = teams.map(t => t.id);
-      const { data: tpData } = await supabase.from('team_players').select('team_id, player_id').in('team_id', teamIds);
+      const { data: tpData } = await supabase.from('team_players').select('team_id, player_id, is_captain, is_vice_captain').in('team_id', teamIds);
       const countMap = new Map();
-      (tpData || []).forEach(tp => countMap.set(tp.player_id, (countMap.get(tp.player_id) || 0) + 1));
+      const capCount = new Map();
+      const vcCount = new Map();
+      (tpData || []).forEach(tp => {
+        countMap.set(tp.player_id, (countMap.get(tp.player_id) || 0) + 1);
+        if (tp.is_captain) capCount.set(tp.player_id, (capCount.get(tp.player_id) || 0) + 1);
+        if (tp.is_vice_captain) vcCount.set(tp.player_id, (vcCount.get(tp.player_id) || 0) + 1);
+      });
       const pctMap = new Map();
       countMap.forEach((count, pid) => pctMap.set(pid, Math.round((count / teams.length) * 100)));
+      const capPctMap = new Map();
+      capCount.forEach((count, pid) => capPctMap.set(pid, Math.round((count / teams.length) * 100)));
+      const vcPctMap = new Map();
+      vcCount.forEach((count, pid) => vcPctMap.set(pid, Math.round((count / teams.length) * 100)));
       setSelectionMap(pctMap);
+      setCaptainMap(capPctMap);
+      setVcMap(vcPctMap);
       // Extract user's own team players
       const myTeam = teams.find(t => t.user_id === user?.id);
       if (myTeam) {
@@ -126,14 +144,27 @@ export default function MatchDetail() {
       }
     } else {
       setSelectionMap(new Map());
+      setCaptainMap(new Map());
+      setVcMap(new Map());
       setUserTeamPlayerIds(new Set());
     }
   }
 
+  const matchStarted = match && hasMatchStarted(match);
+
   const leaderboard = useMemo(() => {
-    return leagueMembers.map(m => ({ ...m, team: leagueTeams.find(t => t.user_id === m.id) }))
-      .filter(m => m.team).sort((a, b) => (b.team.total_points || 0) - (a.team.total_points || 0));
-  }, [leagueMembers, leagueTeams]);
+    const withTeam = leagueMembers.map(m => ({ ...m, team: leagueTeams.find(t => t.user_id === m.id) || null }));
+    if (matchStarted) {
+      return withTeam.filter(m => m.team).sort((a, b) => (b.team.total_points || 0) - (a.team.total_points || 0));
+    }
+    // Pre-match: current user always first, then those with teams
+    return withTeam.sort((a, b) => {
+      const aIsMe = a.id === user?.id, bIsMe = b.id === user?.id;
+      if (aIsMe) return -1;
+      if (bIsMe) return 1;
+      return (b.team ? 1 : 0) - (a.team ? 1 : 0);
+    });
+  }, [leagueMembers, leagueTeams, matchStarted]);
 
   const fantasyRanked = useMemo(() => {
     const active = players.filter(isFantasyRosterActive);
@@ -144,7 +175,6 @@ export default function MatchDetail() {
     const bench = players.filter(p => !isFantasyRosterActive(p)).map(p => ({ ...p, isDream: false }));
     return [...activeWithDream, ...bench];
   }, [players, match]);
-  const matchStarted = match && hasMatchStarted(match);
 
   const sortedFantasyRanked = useMemo(() => {
     return [...fantasyRanked].sort((a, b) => {
@@ -155,13 +185,40 @@ export default function MatchDetail() {
       if (sortBy === 'pts') {
         aVal = a.fantasy_points || 0;
         bVal = b.fantasy_points || 0;
+      } else if (sortBy === 'cap') {
+        aVal = captainMap.get(a.player_id) ?? -1;
+        bVal = captainMap.get(b.player_id) ?? -1;
+      } else if (sortBy === 'vc') {
+        aVal = vcMap.get(a.player_id) ?? -1;
+        bVal = vcMap.get(b.player_id) ?? -1;
       } else {
         aVal = selectionMap.get(a.player_id) ?? -1;
         bVal = selectionMap.get(b.player_id) ?? -1;
       }
       return sortDir === 'desc' ? bVal - aVal : aVal - bVal;
     });
-  }, [fantasyRanked, sortBy, sortDir, selectionMap]);
+  }, [fantasyRanked, sortBy, sortDir, selectionMap, captainMap, vcMap]);
+
+  const MAIN_TABS = matchStarted ? ['leaderboard', 'scorecard', 'players'] : ['leaderboard', 'players'];
+  function onSwipeStart(e) { swipeStartX.current = e.changedTouches[0].clientX; }
+  function onSwipeEnd(e) {
+    if (swipeStartX.current === null) return;
+    const dx = e.changedTouches[0].clientX - swipeStartX.current;
+    swipeStartX.current = null;
+    if (Math.abs(dx) < 50) return;
+    const idx = MAIN_TABS.indexOf(activeTab);
+    if (dx < 0 && idx < MAIN_TABS.length - 1) setActiveTab(MAIN_TABS[idx + 1]);
+    else if (dx > 0 && idx > 0) setActiveTab(MAIN_TABS[idx - 1]);
+  }
+  function onInningsSwipeStart(e) { swipeStartX.current = e.changedTouches[0].clientX; }
+  function onInningsSwipeEnd(e) {
+    if (swipeStartX.current === null) return;
+    const dx = e.changedTouches[0].clientX - swipeStartX.current;
+    swipeStartX.current = null;
+    if (Math.abs(dx) < 50) return;
+    if (dx < 0) setInningsTab('team2');
+    else setInningsTab('team1');
+  }
 
   function handleSort(col) {
     if (sortBy === col) setSortDir(d => d === 'desc' ? 'asc' : 'desc');
@@ -266,7 +323,7 @@ export default function MatchDetail() {
         return (<div className="md-last-updated"><span>Updated {lastUpdated.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>{overMatch && <span className="md-over-badge">Ov {overMatch[1]}</span>}<button className="md-refresh-btn" onClick={refreshData}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></button></div>);
       })()}
 
-      <div className="tabs">
+      <div className="tabs" onTouchStart={onSwipeStart} onTouchEnd={onSwipeEnd}>
         <button className={`tab ${activeTab === 'leaderboard' ? 'active' : ''}`} onClick={() => setActiveTab('leaderboard')}>Leaderboard</button>
         {matchStarted && <button className={`tab ${activeTab === 'scorecard' ? 'active' : ''}`} onClick={() => setActiveTab('scorecard')}>Scorecard</button>}
         <button className={`tab ${activeTab === 'players' ? 'active' : ''}`} onClick={() => setActiveTab('players')}>Fantasy</button>
@@ -276,7 +333,7 @@ export default function MatchDetail() {
         const playing = players.filter(isFantasyRosterActive);
         const t1P = playing.filter(p => p.team === match.team1_short), t2P = playing.filter(p => p.team === match.team2_short);
         return (<div>
-          <div className="tabs" style={{ marginBottom: 12 }}>
+          <div className="tabs" style={{ marginBottom: 12 }} onTouchStart={onInningsSwipeStart} onTouchEnd={onInningsSwipeEnd}>
             <button className={`tab ${inningsTab === 'team1' ? 'active' : ''}`} onClick={() => setInningsTab('team1')}>{match.team1_short} {match.team1_score ? `• ${match.team1_score}` : ''}</button>
             <button className={`tab ${inningsTab === 'team2' ? 'active' : ''}`} onClick={() => setInningsTab('team2')}>{match.team2_short} {match.team2_score ? `• ${match.team2_score}` : ''}</button>
           </div>
@@ -287,23 +344,34 @@ export default function MatchDetail() {
       })() : activeTab === 'leaderboard' ? (
         <div>
           {leagues.length > 1 && <select className="input" value={selectedLeague} onChange={e => { setSelectedLeague(e.target.value); localStorage.setItem(`md_league_${id}`, e.target.value); setCompareMode(false); setComparison(null); setCompareWith(null); }} style={{ marginBottom: 12 }}>{leagues.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</select>}
-          {leaderboard.length === 0 ? <div className="empty"><div className="empty-icon">📊</div><p className="empty-text">No teams yet</p></div> : (
+          {leaderboard.length === 0 ? <div className="empty"><div className="empty-icon">📊</div><p className="empty-text">No one has joined yet</p></div> : (
             <div className="md-lb">
-              <div className="md-lb-header"><span>#</span><span style={{ flex: 1 }}>Player</span>{matchStarted && <button className={`md-compare-icon-btn ${compareMode ? 'active' : ''}`} onClick={toggleCompareMode}>{compareMode ? 'Cancel' : 'Compare'}</button>}<span>Points</span></div>
+              <div className="md-lb-header">
+                {matchStarted && <span style={{ minWidth: 32 }}>#</span>}
+                <span style={{ flex: 1 }}>Player</span>
+                {matchStarted && <button className={`md-compare-icon-btn ${compareMode ? 'active' : ''}`} onClick={toggleCompareMode}>{compareMode ? 'Cancel' : 'Compare'}</button>}
+                <span>{matchStarted ? 'Points' : 'Status'}</span>
+              </div>
               {compareMode && <div className="md-compare-hint">Tap any player to compare their team with yours</div>}
               {leaderboard.map((m, i) => {
                 const rank = i + 1, isMe = m.id === user?.id, canView = matchStarted && m.team;
                 const isCompleted = match.status === 'completed';
                 const medal = isCompleted && rank <= 3 ? ['gold','silver','bronze'][rank-1] : null;
                 return (
-                  <div key={m.id} className={`md-lb-row ${isMe ? 'md-lb-me' : ''} ${canView && !(compareMode && isMe) ? 'md-lb-clickable' : ''} ${compareMode && isMe ? 'md-lb-greyed' : ''} ${compareWith === m.id ? 'md-lb-selected' : ''} ${medal ? `md-lb-${medal}` : ''}`} onClick={() => handleUserClick(m)}>
-                    <div className="md-lb-rank-col"><span className="md-lb-rank-num">#{rank}</span>{medal && <span className="md-lb-medal">{['🥇','🥈','🥉'][rank-1]}</span>}</div>
+                  <div key={m.id} className={`md-lb-row ${isMe ? 'md-lb-me' : ''} ${canView && !(compareMode && isMe) ? 'md-lb-clickable' : ''} ${compareMode && isMe ? 'md-lb-greyed' : ''} ${compareWith === m.id ? 'md-lb-selected' : ''} ${medal ? `md-lb-${medal}` : ''} ${!matchStarted && !m.team && !isMe ? 'md-lb-no-team' : ''}`} onClick={() => handleUserClick(m)}>
+                    {matchStarted && <div className="md-lb-rank-col"><span className="md-lb-rank-num">#{rank}</span>{medal && <span className="md-lb-medal">{['🥇','🥈','🥉'][rank-1]}</span>}</div>}
                     <div className="md-lb-name-col"><span className="md-lb-name">{m.name}</span>{isMe && <span className="md-you-tag">You</span>}</div>
-                    <AnimatedNumber value={m.team.total_points || 0} className="md-lb-pts" />
-                    {compareMode && !isMe ? (comparing && compareWith === m.id ? <div className="spinner" style={{ width: 14, height: 14 }} /> : compareWith === m.id ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--red-primary)" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg> : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round"><path d="M8 3L4 7l4 4"/><path d="M4 7h16"/><path d="M16 21l4-4-4-4"/><path d="M20 17H4"/></svg>) : canView && !compareMode ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round"><path d="M9 18l6-6-6-6"/></svg> : null}
+                    {matchStarted
+                      ? <AnimatedNumber value={m.team?.total_points || 0} className="md-lb-pts" />
+                      : isMe
+                        ? <button className="md-lb-create-btn" onClick={e => { e.stopPropagation(); navigate(`/create-team/${id}/${selectedLeague}`); }}>{m.team ? 'Edit' : 'Create'}</button>
+                        : m.team
+                          ? <span className="md-lb-joined">Joined</span>
+                          : <span className="md-lb-no-team-label">No team</span>
+                    }
+                    {matchStarted && (compareMode && !isMe ? (comparing && compareWith === m.id ? <div className="spinner" style={{ width: 14, height: 14 }} /> : compareWith === m.id ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--red-primary)" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg> : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round"><path d="M8 3L4 7l4 4"/><path d="M4 7h16"/><path d="M16 21l4-4-4-4"/><path d="M20 17H4"/></svg>) : canView && !compareMode ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round"><path d="M9 18l6-6-6-6"/></svg> : null)}
                   </div>);
               })}
-              {!matchStarted && <div className="md-lb-lock-hint"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Teams visible after match starts</div>}
               {comparison?.error && <div className="empty" style={{ marginTop: 12 }}><div className="empty-icon">👥</div><p className="empty-text">Could not load teams</p></div>}
               {comparison && !comparison.error && (() => {
                 const c = comparison;
@@ -414,23 +482,40 @@ export default function MatchDetail() {
             </div>
           )}
         </div>
+      ) : !matchStarted ? (
+        <div className="empty" style={{ paddingTop: 48 }}>
+          <div className="empty-icon">🔒</div>
+          <p className="empty-text" style={{ fontWeight: 600 }}>Stats locked until match starts</p>
+          <p style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 4, textAlign: 'center' }}>
+            Player stats, Sel%, C% &amp; VC% will be revealed once the match begins
+          </p>
+        </div>
       ) : (
         <div>
           {match.status === 'completed' && fantasyRanked.length > 0 && <div className="md-dream-banner"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" strokeWidth="2" strokeLinecap="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> Top 11 = <strong>Dream Team</strong></div>}
           {fantasyRanked.length === 0 ? <div className="empty"><div className="empty-icon">🏏</div><p className="empty-text">No scores yet</p></div> : <>
             <div className="md-stats-header">
               <span style={{flex:1}}>Player</span>
-              {selectionMap.size > 0 && (
-                <div className="md-sel-header-col">
-                  <div className="md-sel-tooltip-anchor">
-                    <button type="button" className="md-sel-info-btn" onClick={e => { e.stopPropagation(); setShowSelTooltip(t => !t); }}>i</button>
-                    {showSelTooltip && (<><div className="md-sel-tooltip-backdrop" onClick={() => setShowSelTooltip(false)} /><div className="md-sel-tooltip" role="tooltip"><span className="md-sel-tooltip-line">% of teams in this league that</span><span className="md-sel-tooltip-line">picked this player for this match</span></div></>)}
-                  </div>
-                  <button type="button" className={`md-sort-col-btn ${sortBy==='sel'?'active':''}`} onClick={() => handleSort('sel')}>
-                    Sel%
-                    <SortIcon active={sortBy==='sel'} dir={sortDir} />
-                  </button>
+              {(captainMap.size > 0 || vcMap.size > 0 || selectionMap.size > 0) && (
+                <div className="md-league-stats-info">
+                  <button type="button" className="md-sel-info-btn" onClick={e => { e.stopPropagation(); setShowLeagueStatsTooltip(t => !t); }}>i</button>
+                  {showLeagueStatsTooltip && (<><div className="md-sel-tooltip-backdrop" onClick={() => setShowLeagueStatsTooltip(false)} /><div className="md-sel-tooltip md-league-stats-tooltip" role="tooltip"><span className="md-sel-tooltip-line">C%, VC% &amp; Sel% are based on</span><span className="md-sel-tooltip-line">teams created in this league</span></div></>)}
                 </div>
+              )}
+              {captainMap.size > 0 && (
+                <button type="button" className={`md-sort-col-btn md-pct-hdr ${sortBy==='cap'?'active':''}`} onClick={() => handleSort('cap')}>
+                  C%<SortIcon active={sortBy==='cap'} dir={sortDir} />
+                </button>
+              )}
+              {vcMap.size > 0 && (
+                <button type="button" className={`md-sort-col-btn md-pct-hdr ${sortBy==='vc'?'active':''}`} onClick={() => handleSort('vc')}>
+                  VC%<SortIcon active={sortBy==='vc'} dir={sortDir} />
+                </button>
+              )}
+              {selectionMap.size > 0 && (
+                <button type="button" className={`md-sort-col-btn md-pct-hdr ${sortBy==='sel'?'active':''}`} onClick={() => handleSort('sel')}>
+                  Sel%<SortIcon active={sortBy==='sel'} dir={sortDir} />
+                </button>
               )}
               <button className={`md-sort-col-btn md-stats-pts-header ${sortBy==='pts'?'active':''}`} onClick={() => handleSort('pts')}>
                 Pts
@@ -444,6 +529,11 @@ export default function MatchDetail() {
                   match={match}
                   dimmed={!isFantasyRosterActive(p)}
                   selectionPct={selectionMap.get(p.player_id)}
+                  captainPct={captainMap.get(p.player_id)}
+                  vcPct={vcMap.get(p.player_id)}
+                  showCapCol={captainMap.size > 0}
+                  showVcCol={vcMap.size > 0}
+                  showSelCol={selectionMap.size > 0}
                   inUserTeam={userTeamPlayerIds.has(p.player_id)}
                   onClick={() => isFantasyRosterActive(p) && setSelectedPlayer(p)}
                 />
@@ -457,34 +547,25 @@ export default function MatchDetail() {
   );
 }
 
-function PlayerBreakdown({ player, onClose }) {
-  const p = player;
-  const c = { run: 1, four: 4, six: 6, halfCentury: 8, century: 16, duck: -2, wicket: 30, maiden: 12, catch: 8, stumping: 12, runOut: 12, inPlayingXI: 4, dotBall: 1, lbwBowledBonus: 8, threeWicketBonus: 4, fourWicketBonus: 8, fiveWicketBonus: 12, twentyFiveBonus: 4, seventyFiveBonus: 12, threeCatchBonus: 4 };
-  const lines = []; let total = 0;
-  function add(label, value, pts) { if (pts === 0) return; lines.push({ label, value, pts }); total += pts; }
-  if (isFantasyRosterActive(p)) add('Playing XI', '', c.inPlayingXI);
-  if (p.runs > 0 || p.balls > 0) { add('Runs', `${p.runs}`, (p.runs||0)*c.run); add('Fours Bonus', `${p.fours||0} x ${c.four}`, (p.fours||0)*c.four); add('Sixes Bonus', `${p.sixes||0} x ${c.six}`, (p.sixes||0)*c.six); if (p.runs>=100) add('Century', '', c.century); else if (p.runs>=75) add('75 Bonus', '', c.seventyFiveBonus); else if (p.runs>=50) add('Half Century', '', c.halfCentury); else if (p.runs>=25) add('25 Bonus', '', c.twentyFiveBonus); if (p.runs===0 && p.balls>0 && ['BAT','WK','AR'].includes(p.role)) add('Duck', '', c.duck); }
-  if (p.wickets>0||p.overs_bowled>0) { add('Wickets', `${p.wickets||0} x ${c.wicket}`, (p.wickets||0)*c.wicket); if (p.lbw_bowled_wickets>0) add('LBW/Bowled', `${p.lbw_bowled_wickets} x ${c.lbwBowledBonus}`, p.lbw_bowled_wickets*c.lbwBowledBonus); add('Maidens', `${p.maidens||0} x ${c.maiden}`, (p.maidens||0)*c.maiden); add('Dots', `${p.dots_bowled||0} x ${c.dotBall}`, (p.dots_bowled||0)*c.dotBall); if (p.wickets>=5) add('5W Bonus', '', c.fiveWicketBonus); else if (p.wickets>=4) add('4W Bonus', '', c.fourWicketBonus); else if (p.wickets>=3) add('3W Bonus', '', c.threeWicketBonus); }
-  if (p.catches>0) { add('Catches', `${p.catches} x ${c.catch}`, p.catches*c.catch); if (p.catches>=3) add('3 Catch Bonus', '', c.threeCatchBonus); }
-  if (p.stumpings>0) add('Stumpings', `${p.stumpings} x ${c.stumping}`, p.stumpings*c.stumping);
-  if (p.run_outs > 0) add('Run Outs', `${p.run_outs} x ${c.runOut}`, p.run_outs * c.runOut);
-  return (<><div className="pb-overlay" onClick={onClose} /><div className="pb-slider">
-    <div className="pb-header"><div className="pb-player-info">{p.image_url ? <img className="pb-img" src={p.image_url} alt={p.name} /> : <div className="pb-fb">{p.name.split(' ').map(n=>n[0]).join('').slice(0,2)}</div>}<div><div className="pb-name">{p.name}</div><div className="pb-meta">{p.team} • {p.role}</div></div></div><button className="pb-close" onClick={onClose}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>
-    <div className="pb-stats-row">{p.runs>0&&<div className="pb-stat"><span className="pb-stat-val">{p.runs}</span><span className="pb-stat-label">Runs</span></div>}{p.balls>0&&<div className="pb-stat"><span className="pb-stat-val">{p.balls}</span><span className="pb-stat-label">Balls</span></div>}{p.fours>0&&<div className="pb-stat"><span className="pb-stat-val">{p.fours}</span><span className="pb-stat-label">4s</span></div>}{p.sixes>0&&<div className="pb-stat"><span className="pb-stat-val">{p.sixes}</span><span className="pb-stat-label">6s</span></div>}{p.wickets>0&&<div className="pb-stat"><span className="pb-stat-val">{p.wickets}</span><span className="pb-stat-label">Wkts</span></div>}{p.overs_bowled>0&&<div className="pb-stat"><span className="pb-stat-val">{p.overs_bowled}</span><span className="pb-stat-label">Overs</span></div>}{p.catches>0&&<div className="pb-stat"><span className="pb-stat-val">{p.catches}</span><span className="pb-stat-label">Catches</span></div>}</div>
-    <div className="pb-breakdown"><div className="pb-breakdown-title">Points Breakdown</div>{lines.map((l,i)=><div key={i} className={`pb-line ${l.pts<0?'negative':''}`}><span className="pb-line-label">{l.label}</span>{l.value&&<span className="pb-line-value">{l.value}</span>}<span className={`pb-line-pts ${l.pts>0?'pos':l.pts<0?'neg':''}`}>{l.pts>0?'+':''}{l.pts}</span></div>)}<div className="pb-total"><span>Total</span><span className="pb-total-pts">{total}</span></div></div>
-  </div></>);
-}
+
 
 function SortIcon({ active, dir }) {
   if (!active) return <span style={{opacity:0.35, fontSize:10, lineHeight:1, marginLeft:2}}>⇅</span>;
   return <span style={{fontSize:12, lineHeight:1, marginLeft:2, fontWeight:700}}>{dir === 'desc' ? '↓' : '↑'}</span>;
 }
 
-function FantasyRow({ p, match, dimmed, selectionPct, inUserTeam, onClick }) {
+function FantasyRow({ p, match, dimmed, selectionPct, captainPct, vcPct, showCapCol, showVcCol, showSelCol, inUserTeam, onClick }) {
   return (<div className={`md-player-row ${inUserTeam ? 'md-player-row-mine' : ''}`} style={{ opacity: dimmed ? 0.35 : 1, cursor: isFantasyRosterActive(p) ? 'pointer' : 'default' }} onClick={onClick}>
     <div className="md-player-left">{p.image_url ? <img src={p.image_url} alt={p.name} className={`md-player-img ${p.isDream?'md-dream-border':''}`} /> : <div className={`avatar md-player-avatar ${p.isDream?'md-dream-border':''}`} style={{ background: p.team===match.team1_short?'var(--blue)':'var(--coral)' }}>{p.name.split(' ').map(n=>n[0]).join('').slice(0,2)}</div>}{p.isDream&&<div className="md-dream-badge"><svg width="10" height="10" viewBox="0 0 24 24" fill="var(--gold)" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>}</div>
-    <div className="player-info" style={{ flex: 1 }}><div className="player-name">{p.name}{p.isDream&&<span className="md-dream-tag">Dream XI</span>}</div><div className="player-meta"><span>{p.team}</span><span>•</span><span>{p.role}</span>{p.runs>0&&<span>• {p.runs}({p.balls})</span>}{p.wickets>0&&<span>• {p.wickets}W</span>}{p.catches>0&&<span>• {p.catches}C</span>}</div></div>
-    {selectionPct !== undefined && <div className="md-sel-pct">{selectionPct}%</div>}
+    <div className="player-info" style={{ flex: 1 }}>
+      <div className="player-name" style={{ fontSize: 10.5 }}>{p.name}</div>
+      <div className="player-meta" style={{ fontSize: 9.5 }}>
+        <span>{p.team}</span><span>•</span><span>{p.role}</span>{p.runs>0&&<span>• {p.runs}({p.balls})</span>}{p.wickets>0&&<span>• {p.wickets}W</span>}{p.catches>0&&<span>• {p.catches}C</span>}
+      </div>
+    </div>
+    {showCapCol && <div className="md-pct-col">{captainPct > 0 ? `${captainPct}%` : ''}</div>}
+    {showVcCol && <div className="md-pct-col">{vcPct > 0 ? `${vcPct}%` : ''}</div>}
+    {showSelCol && <div className="md-pct-col">{selectionPct !== undefined ? `${selectionPct}%` : ''}</div>}
     <div className={`md-player-pts ${(p.fantasy_points||0)>50?'high':(p.fantasy_points||0)<0?'neg':''}`}>{isFantasyRosterActive(p) ? <AnimatedNumber value={p.fantasy_points||0} /> : '-'}</div>
   </div>);
 }

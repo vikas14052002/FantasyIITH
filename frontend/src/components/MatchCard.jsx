@@ -29,11 +29,7 @@ export default function MatchCard({ match, leagueId, hasTeam: hasTeamProp }) {
   const teamExists = hasTeamProp !== undefined ? hasTeamProp : !!existingTeam;
 
   const handleClick = () => {
-    if (match.status === 'upcoming' && leagueId) {
-      navigate(`/create-team/${match.id}/${leagueId}`);
-    } else {
-      navigate(`/match/${match.id}`);
-    }
+    navigate(`/match/${match.id}`);
   };
 
   const logo1 = getTeamLogo(match.team1_short);
@@ -50,9 +46,14 @@ export default function MatchCard({ match, leagueId, hasTeam: hasTeamProp }) {
       <div className="match-card-inner">
         <div className="match-card-header">
           <span className="match-label">Match {match.match_number} • PlayXI</span>
-          <span className={`badge badge-${match.status}`}>
-            {match.status === 'live' ? '● LIVE' : match.status.toUpperCase()}
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            {match.lineups_synced && match.status === 'upcoming' && (
+              <span className="mc-lineups-badge">Lineups Out</span>
+            )}
+            <span className={`badge badge-${match.status}`}>
+              {match.status === 'live' ? '● LIVE' : match.status.toUpperCase()}
+            </span>
+          </div>
         </div>
 
         <div className="match-card-teams">

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { getUser } from '../lib/auth';
@@ -21,6 +21,30 @@ export default function LeagueDetail() {
   const [showShare, setShowShare] = useState(false);
   const navigate = useNavigate();
   const user = getUser();
+  const swipeStartX = useRef(null);
+  const MAIN_TABS = ['matches', 'leaderboard'];
+  const MATCH_SUBTABS = ['live', 'upcoming', 'completed'];
+
+  function onMainTouchStart(e) { swipeStartX.current = e.changedTouches[0].clientX; }
+  function onMainTouchEnd(e) {
+    if (swipeStartX.current === null) return;
+    const dx = e.changedTouches[0].clientX - swipeStartX.current;
+    swipeStartX.current = null;
+    if (Math.abs(dx) < 50) return;
+    const idx = MAIN_TABS.indexOf(activeTab);
+    if (dx < 0 && idx < MAIN_TABS.length - 1) { setActiveTab(MAIN_TABS[idx + 1]); }
+    else if (dx > 0 && idx > 0) { setActiveTab(MAIN_TABS[idx - 1]); }
+  }
+  function onSubTouchStart(e) { swipeStartX.current = e.changedTouches[0].clientX; }
+  function onSubTouchEnd(e) {
+    if (swipeStartX.current === null) return;
+    const dx = e.changedTouches[0].clientX - swipeStartX.current;
+    swipeStartX.current = null;
+    if (Math.abs(dx) < 50) return;
+    const idx = MATCH_SUBTABS.indexOf(matchSubTab);
+    if (dx < 0 && idx < MATCH_SUBTABS.length - 1) { setMatchSubTab(MATCH_SUBTABS[idx + 1]); }
+    else if (dx > 0 && idx > 0) { setMatchSubTab(MATCH_SUBTABS[idx - 1]); }
+  }
 
   useEffect(() => { loadLeague(); }, [id]);
 
@@ -115,14 +139,14 @@ export default function LeagueDetail() {
         </div>
       </div>
 
-      <div className="tabs">
+      <div className="tabs" onTouchStart={onMainTouchStart} onTouchEnd={onMainTouchEnd}>
         <button className={`tab ${activeTab === 'matches' ? 'active' : ''}`} onClick={() => setActiveTab('matches')}>Matches</button>
         <button className={`tab ${activeTab === 'leaderboard' ? 'active' : ''}`} onClick={() => setActiveTab('leaderboard')}>Leaderboard</button>
       </div>
 
       {activeTab === 'matches' ? (
         <>
-          <div className="tabs ld-subtabs">
+          <div className="tabs ld-subtabs" onTouchStart={onSubTouchStart} onTouchEnd={onSubTouchEnd}>
             {['live', 'upcoming', 'completed'].map(tab => (
               <button
                 key={tab}
