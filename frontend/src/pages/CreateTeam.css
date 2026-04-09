@@ -9,8 +9,8 @@
 .ct-header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
+  gap: 8px;
+  padding: 7px 12px;
   background: var(--bg-surface);
   border-bottom: 1px solid var(--border);
   position: sticky;
@@ -35,12 +35,12 @@
 }
 
 .ct-match-label {
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 700;
 }
 
 .ct-match-sub {
-  font-size: 10px;
+  font-size: 9px;
   color: var(--text-muted);
   font-weight: 500;
   margin-top: 1px;
@@ -93,9 +93,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 16px;
+  padding: 6px 12px;
   background: var(--bg-surface);
-  gap: 8px;
+  gap: 6px;
 }
 
 .d11-comp-col {
@@ -108,18 +108,18 @@
 .d11-comp-team {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
 }
 
 .d11-team-logo {
-  width: 28px;
-  height: 28px;
+  width: 20px;
+  height: 20px;
   object-fit: contain;
   border-radius: 50%;
 }
 
 .d11-comp-label {
-  font-size: 10px;
+  font-size: 8px;
   font-weight: 500;
   color: var(--text-secondary);
   display: block;
@@ -127,7 +127,7 @@
 }
 
 .d11-comp-value {
-  font-size: 18px;
+  font-size: 14px;
   font-weight: 700;
   display: block;
   text-align: center;
@@ -135,7 +135,7 @@
 }
 
 .d11-comp-dim {
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 500;
   color: var(--text-secondary);
 }
@@ -144,15 +144,15 @@
 .d11-slots {
   display: flex;
   gap: 3px;
-  padding: 8px 16px 10px;
+  padding: 5px 12px 6px;
   background: var(--bg-surface);
   border-bottom: 1px solid var(--border);
 }
 
 .d11-slot {
   flex: 1;
-  height: 22px;
-  border-radius: 4px;
+  height: 16px;
+  border-radius: 3px;
   background: var(--bg-elevated);
   display: flex;
   align-items: center;
@@ -168,6 +168,42 @@
   font-size: 9px;
   font-weight: 700;
   color: #fff;
+}
+
+/* ── Pitch Info Banner ── */
+.ct-pitch-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 5px 12px;
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border);
+  font-size: 9px;
+  color: var(--text-secondary);
+}
+
+.ct-pitch-item {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-weight: 500;
+}
+
+.ct-pitch-label {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.ct-pitch-val {
+  font-weight: 700;
+  color: var(--text-primary);
+  text-transform: capitalize;
+}
+
+.ct-pitch-sep {
+  color: var(--border);
+  font-size: 11px;
 }
 
 /* ── Credit Progress Bar ── */
@@ -316,7 +352,7 @@
 /* ── Tabs ── */
 .ct-tabs {
   position: sticky;
-  top: 53px;
+  top: 42px;
   z-index: 40;
   background: var(--bg-primary);
   margin-bottom: 0;
@@ -924,7 +960,7 @@
   min-width: 0;
 }
 .ct-lu-name {
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 600;
   color: var(--text-primary);
   white-space: nowrap;
@@ -932,7 +968,7 @@
   text-overflow: ellipsis;
 }
 .ct-lu-role {
-  font-size: 8.5px;
+  font-size: 8px;
   font-weight: 600;
   color: var(--text-muted);
   text-transform: uppercase;
@@ -940,6 +976,29 @@
 }
 
 /* ── Lineup section labels ── */
+.ct-lu-cv-badge {
+  font-size: 7px;
+  font-weight: 800;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.ct-lu-c-badge { background: var(--gold); color: #000; }
+.ct-lu-vc-badge { background: var(--bg-elevated); color: var(--text-secondary); border: 1px solid var(--border); }
+
+.ct-lu-sel {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--text-muted);
+  width: 30px;
+  flex-shrink: 0;
+  text-align: center;
+}
+
 .ct-lu-section-label {
   font-size: 8px;
   font-weight: 700;

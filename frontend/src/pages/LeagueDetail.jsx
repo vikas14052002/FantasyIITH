@@ -115,7 +115,8 @@ export default function LeagueDetail() {
       {showShare && (
         <ShareSheet
           title="Join my Fantasy League!"
-          text={`Join "${league.name}" on PlayXI! Code: ${league.invite_code}`}
+          text={`Join "${league.name}" on PlayXI!`}
+          url={`${window.location.origin}/leagues/join?code=${league.invite_code}`}
           onClose={() => setShowShare(false)}
         />
       )}
@@ -133,13 +134,23 @@ export default function LeagueDetail() {
           <span style={{ background: 'var(--bg-elevated)', padding: '6px 16px', borderRadius: 8, fontWeight: 700, letterSpacing: 2 }}>
             {league.invite_code}
           </span>
-          <button className="btn btn-outline" style={{ width: 'auto', minHeight: 36, padding: '6px 16px', fontSize: 12 }} onClick={() => setShowShare(true)}>
+          <button className="btn btn-outline" style={{ width: 'auto', minHeight: 36, padding: '6px 16px', fontSize: 12 }} onClick={async () => {
+            const url = `${window.location.origin}/leagues/join?code=${league.invite_code}`;
+            if (navigator.share) {
+              try {
+                await navigator.share({ title: 'Join my Fantasy League!', text: `Join "${league.name}" on PlayXI!`, url });
+                return;
+              } catch {}
+            }
+            setShowShare(true);
+          }}>
             Share
           </button>
         </div>
       </div>
 
-      <div className="tabs" onTouchStart={onMainTouchStart} onTouchEnd={onMainTouchEnd}>
+      <div onTouchStart={onMainTouchStart} onTouchEnd={onMainTouchEnd}>
+      <div className="tabs">
         <button className={`tab ${activeTab === 'matches' ? 'active' : ''}`} onClick={() => setActiveTab('matches')}>Matches</button>
         <button className={`tab ${activeTab === 'leaderboard' ? 'active' : ''}`} onClick={() => setActiveTab('leaderboard')}>Leaderboard</button>
       </div>
@@ -220,6 +231,7 @@ export default function LeagueDetail() {
           )}
         </>
       )}
+      </div>{/* end swipe wrapper */}
     </div>
   );
 }

@@ -381,6 +381,11 @@ function LineupTab({ matches }) {
   const [tossChoice, setTossChoice] = useState('bat');
   const [tossSaving, setTossSaving] = useState(false);
   const [tossMsg, setTossMsg] = useState('');
+  const [pitchType, setPitchType] = useState('');
+  const [pitchSupports, setPitchSupports] = useState('');
+  const [avgScore, setAvgScore] = useState('');
+  const [pitchSaving, setPitchSaving] = useState(false);
+  const [pitchMsg, setPitchMsg] = useState('');
 
   const selectedMatch = matches.find(m => m.id === matchId);
   const teamOptions = selectedMatch ? [selectedMatch.team1_short, selectedMatch.team2_short] : [];
@@ -394,7 +399,7 @@ function LineupTab({ matches }) {
     if (!mid) { setPlayers([]); setXi({}); setTossTeam(''); return; }
     const [{ data }, { data: matchData }] = await Promise.all([
       supabase.from('match_players').select('id, name, team, role, is_playing, is_impact_sub, batting_order').eq('match_id', mid),
-      supabase.from('matches').select('result, team1_short, team2_short').eq('id', mid).single(),
+      supabase.from('matches').select('result, team1_short, team2_short, pitch_type, pitch_supports, avg_score').eq('id', mid).single(),
     ]);
     const list = data || [];
     setPlayers(list);
@@ -408,6 +413,11 @@ function LineupTab({ matches }) {
     } else {
       setTossTeam(matchData?.team1_short || '');
     }
+
+    // Seed pitch info
+    setPitchType(matchData?.pitch_type || '');
+    setPitchSupports(matchData?.pitch_supports || '');
+    setAvgScore(matchData?.avg_score != null ? String(matchData.avg_score) : '');
 
     // Seed XI from current DB state — ordered by batting_order
     const initXi = {};
@@ -433,6 +443,25 @@ function LineupTab({ matches }) {
       setTossMsg('Error: ' + err.message);
     }
     setTossSaving(false);
+  }
+
+  async function savePitchInfo() {
+    if (!matchId) return;
+    setPitchSaving(true);
+    setPitchMsg('');
+    try {
+      const updates = {
+        pitch_type: pitchType || null,
+        pitch_supports: pitchSupports || null,
+        avg_score: avgScore !== '' ? parseInt(avgScore, 10) : null,
+      };
+      const { error } = await supabase.from('matches').update(updates).eq('id', matchId);
+      if (error) throw error;
+      setPitchMsg('Pitch info saved!');
+    } catch (err) {
+      setPitchMsg('Error: ' + err.message);
+    }
+    setPitchSaving(false);
   }
 
   async function saveLineup() {
@@ -499,6 +528,51 @@ function LineupTab({ matches }) {
             </div>
             <StatusMsg msg={tossMsg} />
           </>
+        )}
+      </div>
+
+      {/* Pitch Info */}
+      <div className="card">
+        <SectionTitle>Pitch Info</SectionTitle>
+        {matchId ? (
+          <>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 10 }}>
+              <select className="input" value={pitchType} onChange={e => setPitchType(e.target.value)}>
+                <option value="">Pitch type…</option>
+                <option value="batting">Batting</option>
+                <option value="bowling">Bowling</option>
+                <option value="balanced">Balanced</option>
+              </select>
+              <select className="input" value={pitchSupports} onChange={e => setPitchSupports(e.target.value)}>
+                <option value="">Supports…</option>
+                <option value="pacers">Pacers</option>
+                <option value="spinners">Spinners</option>
+              </select>
+              <input
+                className="input"
+                type="number"
+                placeholder="Avg Score"
+                value={avgScore}
+                onChange={e => setAvgScore(e.target.value)}
+                style={{ textAlign: 'center' }}
+              />
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button className="btn btn-primary" onClick={savePitchInfo} disabled={pitchSaving} style={{ minHeight: 44, flex: 1 }}>
+                {pitchSaving ? 'Saving…' : 'Save Pitch Info'}
+              </button>
+              <SmallBtn label="Clear" danger onClick={async () => {
+                setPitchSaving(true); setPitchMsg('');
+                const { error } = await supabase.from('matches').update({ pitch_type: null, pitch_supports: null, avg_score: null }).eq('id', matchId);
+                if (!error) { setPitchType(''); setPitchSupports(''); setAvgScore(''); }
+                setPitchMsg(error ? 'Error: ' + error.message : 'Cleared');
+                setPitchSaving(false);
+              }} disabled={pitchSaving} />
+            </div>
+            <StatusMsg msg={pitchMsg} />
+          </>
+        ) : (
+          <MatchSelect matches={matches} value={matchId} onChange={loadPlayers} />
         )}
       </div>
 

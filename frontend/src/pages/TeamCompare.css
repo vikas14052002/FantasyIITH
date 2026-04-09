@@ -122,9 +122,9 @@
 .cmp-cv-row,
 .cmp-common-row {
   display: grid;
-  grid-template-columns: 36px 1fr 20px 1fr 36px;
+  grid-template-columns: 30px 1fr 16px 1fr 30px;
   align-items: center;
-  padding: 10px 12px;
+  padding: 7px 10px;
   border-bottom: 1px solid var(--border);
   gap: 0;
 }
@@ -137,7 +137,7 @@
 .cmp-diff-pts,
 .cmp-cv-pts,
 .cmp-pts {
-  font-size: 15px;
+  font-size: 11px;
   font-weight: 700;
   text-align: center;
 }
@@ -246,8 +246,8 @@
 }
 
 .cmp-chip-img {
-  width: 30px;
-  height: 30px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   object-fit: cover;
   flex-shrink: 0;
@@ -255,14 +255,14 @@
 }
 
 .cmp-chip-fb {
-  width: 30px;
-  height: 30px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   background: var(--bg-elevated);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 10px;
+  font-size: 8px;
   font-weight: 700;
   flex-shrink: 0;
   color: var(--text-primary);
@@ -275,19 +275,23 @@
 }
 
 .cmp-chip-name {
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+}
+
+.cmp-chip-name-text {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  max-width: 90px;
+  min-width: 0;
 }
 
 .cmp-chip-role {
-  font-size: 9px;
+  font-size: 8px;
   color: var(--text-muted);
 }
 
@@ -295,10 +299,10 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
-  font-size: 8px;
+  font-size: 7px;
   font-weight: 800;
   flex-shrink: 0;
 }

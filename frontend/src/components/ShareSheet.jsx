@@ -1,24 +1,29 @@
 import { useState } from 'react';
 import './ShareSheet.css';
 
-export default function ShareSheet({ title, text, onClose }) {
+export default function ShareSheet({ title, text, url, onClose }) {
   const [copied, setCopied] = useState(false);
 
   const shareText = text || title || '';
+  const fullText = url ? `${shareText} ${url}` : shareText;
 
   const handleWhatsApp = () => {
-    window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, '_blank');
+    window.open(`https://wa.me/?text=${encodeURIComponent(fullText)}`, '_blank');
     onClose();
   };
 
   const handleTelegram = () => {
-    window.open(`https://t.me/share/url?text=${encodeURIComponent(shareText)}`, '_blank');
+    const params = url
+      ? `url=${encodeURIComponent(url)}&text=${encodeURIComponent(shareText)}`
+      : `text=${encodeURIComponent(shareText)}`;
+    window.open(`https://t.me/share/url?${params}`, '_blank');
     onClose();
   };
 
   const handleCopy = async () => {
+    const copyValue = url ? `${shareText} ${url}` : shareText;
     try {
-      await navigator.clipboard.writeText(shareText);
+      await navigator.clipboard.writeText(copyValue);
       setCopied(true);
       setTimeout(() => {
         setCopied(false);
@@ -27,7 +32,7 @@ export default function ShareSheet({ title, text, onClose }) {
     } catch {
       // Fallback
       const ta = document.createElement('textarea');
-      ta.value = shareText;
+      ta.value = copyValue;
       document.body.appendChild(ta);
       ta.select();
       document.execCommand('copy');

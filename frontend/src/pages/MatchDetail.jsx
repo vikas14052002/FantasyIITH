@@ -323,7 +323,8 @@ export default function MatchDetail() {
         return (<div className="md-last-updated"><span>Updated {lastUpdated.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>{overMatch && <span className="md-over-badge">Ov {overMatch[1]}</span>}<button className="md-refresh-btn" onClick={refreshData}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></button></div>);
       })()}
 
-      <div className="tabs" onTouchStart={onSwipeStart} onTouchEnd={onSwipeEnd}>
+      <div onTouchStart={onSwipeStart} onTouchEnd={onSwipeEnd}>
+      <div className="tabs">
         <button className={`tab ${activeTab === 'leaderboard' ? 'active' : ''}`} onClick={() => setActiveTab('leaderboard')}>Leaderboard</button>
         {matchStarted && <button className={`tab ${activeTab === 'scorecard' ? 'active' : ''}`} onClick={() => setActiveTab('scorecard')}>Scorecard</button>}
         <button className={`tab ${activeTab === 'players' ? 'active' : ''}`} onClick={() => setActiveTab('players')}>Fantasy</button>
@@ -542,6 +543,7 @@ export default function MatchDetail() {
         </div>
       )}
 
+      </div>{/* end swipe wrapper */}
       {selectedPlayer && <PlayerBreakdown player={selectedPlayer} onClose={() => setSelectedPlayer(null)} />}
     </div>
   );
@@ -550,16 +552,16 @@ export default function MatchDetail() {
 
 
 function SortIcon({ active, dir }) {
-  if (!active) return <span style={{opacity:0.35, fontSize:10, lineHeight:1, marginLeft:2}}>⇅</span>;
-  return <span style={{fontSize:12, lineHeight:1, marginLeft:2, fontWeight:700}}>{dir === 'desc' ? '↓' : '↑'}</span>;
+  if (!active) return null;
+  return <span style={{fontSize:9, lineHeight:1, marginLeft:1, fontWeight:700}}>{dir === 'desc' ? '↓' : '↑'}</span>;
 }
 
 function FantasyRow({ p, match, dimmed, selectionPct, captainPct, vcPct, showCapCol, showVcCol, showSelCol, inUserTeam, onClick }) {
   return (<div className={`md-player-row ${inUserTeam ? 'md-player-row-mine' : ''}`} style={{ opacity: dimmed ? 0.35 : 1, cursor: isFantasyRosterActive(p) ? 'pointer' : 'default' }} onClick={onClick}>
     <div className="md-player-left">{p.image_url ? <img src={p.image_url} alt={p.name} className={`md-player-img ${p.isDream?'md-dream-border':''}`} /> : <div className={`avatar md-player-avatar ${p.isDream?'md-dream-border':''}`} style={{ background: p.team===match.team1_short?'var(--blue)':'var(--coral)' }}>{p.name.split(' ').map(n=>n[0]).join('').slice(0,2)}</div>}{p.isDream&&<div className="md-dream-badge"><svg width="10" height="10" viewBox="0 0 24 24" fill="var(--gold)" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>}</div>
     <div className="player-info" style={{ flex: 1 }}>
-      <div className="player-name" style={{ fontSize: 10.5 }}>{p.name}</div>
-      <div className="player-meta" style={{ fontSize: 9.5 }}>
+      <div className="player-name" style={{ fontSize: 9.5 }}>{p.name}</div>
+      <div className="player-meta" style={{ fontSize: 8.5 }}>
         <span>{p.team}</span><span>•</span><span>{p.role}</span>{p.runs>0&&<span>• {p.runs}({p.balls})</span>}{p.wickets>0&&<span>• {p.wickets}W</span>}{p.catches>0&&<span>• {p.catches}C</span>}
       </div>
     </div>
@@ -594,4 +596,4 @@ function ScorecardSection({ batsmen, bowlers, score, teamName, onPlayerClick }) 
 }
 
 function CatHeader({ title, pts1, pts2 }) { const d=pts1-pts2; return <div className="cmp-cat-header"><div className="cmp-cat-title"><span>{title}</span></div><div className="cmp-cat-summary"><span className="cmp-cat-pts">{pts1}</span><span className={`cmp-cat-diff ${d>0?'pos':d<0?'neg':''}`}>{d>0?'+':''}{d}</span><span className="cmp-cat-pts">{pts2}</span></div></div>; }
-function CmpChip({ p, label }) { if(!p)return null; return <div className="cmp-chip">{p.image_url?<img className="cmp-chip-img" src={p.image_url} alt={p.name}/>:<div className="cmp-chip-fb">{p.name.split(' ').map(n=>n[0]).join('').slice(0,2)}</div>}<div className="cmp-chip-info"><div className="cmp-chip-name">{p.name.split(' ').pop()}{label&&<span className={`cmp-chip-label ${label==='C'?'cmp-badge-c':'cmp-badge-vc'}`}>{label}</span>}</div><div className="cmp-chip-role">{p.role}</div></div></div>; }
+function CmpChip({ p, label }) { if(!p)return null; return <div className="cmp-chip">{p.image_url?<img className="cmp-chip-img" src={p.image_url} alt={p.name}/>:<div className="cmp-chip-fb">{p.name.split(' ').map(n=>n[0]).join('').slice(0,2)}</div>}<div className="cmp-chip-info"><div className="cmp-chip-name">{label&&<span className={`cmp-chip-label ${label==='C'?'cmp-badge-c':'cmp-badge-vc'}`}>{label}</span>}<span className="cmp-chip-name-text">{p.name.split(' ').pop()}</span></div><div className="cmp-chip-role">{p.role}</div></div></div>; }

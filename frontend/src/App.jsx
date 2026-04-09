@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { getUser, needsPhoneLink } from './lib/auth';
 import { startHeartbeat } from './lib/heartbeat';
 import { initTheme } from './lib/theme';
@@ -32,7 +32,8 @@ const UserBreakdown = lazy(() => import('./pages/UserBreakdown'));
 
 function ProtectedRoute({ children }) {
   const user = getUser();
-  if (!user) return <Navigate to="/login" replace />;
+  const location = useLocation();
+  if (!user) return <Navigate to="/login" state={{ from: location }} replace />;
   return children;
 }
 

@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { loginWithPhone, linkPhoneToExisting } from '../lib/auth';
 import { sendOTP, verifyOTP } from '../lib/firebase';
 import { supabase } from '../lib/supabase';
@@ -38,6 +38,8 @@ export default function Login() {
   const confirmationRef = useRef(null);
   const timerRef = useRef(null);
   const navigate = useNavigate();
+  const location = useLocation();
+  const from = location.state?.from?.pathname + (location.state?.from?.search || '') || '/leagues';
 
   const fullPhone = () => phone.startsWith('+') ? phone : `${country.code}${phone}`;
 
@@ -110,7 +112,7 @@ export default function Login() {
       if (existing) {
         // Phone already linked — direct login
         await loginWithPhone(fullPhone());
-        navigate('/leagues');
+        navigate(from, { replace: true });
       } else {
         // Phone not in DB — ask: new or link existing
         setStep('choose');
@@ -135,7 +137,7 @@ export default function Login() {
     setError('');
     try {
       await loginWithPhone(fullPhone(), name.trim());
-      navigate('/leagues');
+      navigate(from, { replace: true });
     } catch (err) {
       setError(err.message || 'Something went wrong');
       logError('new_account', err, { phone, userName: name });
@@ -151,7 +153,7 @@ export default function Login() {
     setError('');
     try {
       await linkPhoneToExisting(oldName.trim(), oldPassword, fullPhone());
-      navigate('/leagues');
+      navigate(from, { replace: true });
     } catch (err) {
       setError(err.message || 'Failed to link account');
       logError('link_account', err, { phone, userName: oldName });

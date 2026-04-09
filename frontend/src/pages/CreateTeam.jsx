@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { getUser } from '../lib/auth';
 import { hasMatchStarted } from '../lib/matchLock';
 import { TEAM_COLORS, getTeamLogo } from '../lib/teamLogos';
+import CountdownTimer from '../components/CountdownTimer';
 import { MatchDetailSkeleton } from '../components/Skeleton';
 import { isFantasyRosterActive } from '../lib/matchPlayers';
 import './CreateTeam.css';
@@ -44,7 +45,6 @@ export default function CreateTeam() {
   const [existingVcId, setExistingVcId] = useState(null);
   const [sortKey, setSortKey] = useState('credits');
   const [sortDir, setSortDir] = useState('desc');
-  const [showSelectedStrip, setShowSelectedStrip] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
   const [paymentLoading, setPaymentLoading] = useState(false);
@@ -239,14 +239,6 @@ export default function CreateTeam() {
     setTimeout(() => { setFlashId(null); setFlashType(null); }, 400);
   }
 
-  function removePlayer(player) {
-    setSelected(selected.filter(p => p.player_id !== player.player_id));
-  }
-
-  function clearAll() {
-    setSelected([]);
-  }
-
   const filteredPlayers = useMemo(() => {
     const list = players.filter(p => p.role === activeRole);
     return sortPlayers(list, sortKey, sortDir, selectionPct);
@@ -343,9 +335,16 @@ export default function CreateTeam() {
         >
           <span className="ct-lu-order">{order > 0 ? order : '·'}</span>
           <div className="ct-lu-info">
-            <span className="ct-lu-name">{player.name}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <span className="ct-lu-name">{player.name}</span>
+              {existingCaptainId === player.player_id && <span className="ct-lu-cv-badge ct-lu-c-badge">C</span>}
+              {existingVcId === player.player_id && <span className="ct-lu-cv-badge ct-lu-vc-badge">VC</span>}
+            </div>
             <span className="ct-lu-role">{player.role}</span>
           </div>
+          {selectionPct[player.player_id] !== undefined && (
+            <span className="ct-lu-sel">{selectionPct[player.player_id]}%</span>
+          )}
           <div className={`ct-select-btn ${isSelected ? 'active' : ''}`}
             style={{ width: 24, height: 24, minWidth: 24 }}>
             {isSelected ? (
@@ -522,6 +521,7 @@ export default function CreateTeam() {
         </button>
         <div className="ct-header-info">
           <span className="ct-match-label">{isEditing ? 'Edit Team' : 'Create Team'}</span>
+          {match?.start_time && <CountdownTimer targetDate={match.start_time} />}
         </div>
         <button className="header-icon-btn" onClick={() => navigate('/points')} title="Points">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
@@ -558,12 +558,38 @@ export default function CreateTeam() {
       {match?.result && (
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-          padding: '6px 14px', margin: '0 16px',
+          padding: '5px 14px', margin: '0 12px',
           background: 'var(--bg-elevated)', border: '1px solid var(--border)',
-          borderRadius: 8, fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)',
+          borderRadius: 8, fontSize: 11, fontWeight: 500, color: 'var(--text-secondary)',
         }}>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2" stroke="white" strokeWidth="2" strokeLinecap="round" fill="none"/></svg>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2" stroke="white" strokeWidth="2" strokeLinecap="round" fill="none"/></svg>
           {match.result}
+        </div>
+      )}
+
+      {/* Pitch info banner */}
+      {(match?.pitch_type || match?.pitch_supports || match?.avg_score) && (
+        <div className="ct-pitch-banner">
+          {match.pitch_type && (
+            <span className="ct-pitch-item">
+              <span className="ct-pitch-label">Pitch:</span>
+              <span className="ct-pitch-val">{match.pitch_type}</span>
+            </span>
+          )}
+          {match.pitch_type && (match.pitch_supports || match.avg_score) && <span className="ct-pitch-sep">·</span>}
+          {match.pitch_supports && (
+            <span className="ct-pitch-item">
+              <span className="ct-pitch-label">Supports:</span>
+              <span className="ct-pitch-val">{match.pitch_supports}</span>
+            </span>
+          )}
+          {match.pitch_supports && match.avg_score && <span className="ct-pitch-sep">·</span>}
+          {match.avg_score && (
+            <span className="ct-pitch-item">
+              <span className="ct-pitch-label">Avg Score:</span>
+              <span className="ct-pitch-val">{match.avg_score}</span>
+            </span>
+          )}
         </div>
       )}
 
@@ -578,32 +604,6 @@ export default function CreateTeam() {
         ))}
       </div>
 
-      {/* Selected players strip */}
-      {selected.length > 0 && (
-        <div className="ct-selected-strip">
-          <div className="ct-strip-header" onClick={() => setShowSelectedStrip(!showSelectedStrip)}>
-            <span className="ct-strip-title">
-              Selected ({selected.length}/11)
-              <svg className={`ct-strip-chevron ${showSelectedStrip ? 'open' : ''}`} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6"/></svg>
-            </span>
-            {selected.length > 0 && (
-              <button className="ct-strip-clear" onClick={(e) => { e.stopPropagation(); clearAll(); }}>Clear All</button>
-            )}
-          </div>
-          {showSelectedStrip && (
-            <div className="ct-strip-players fade-in">
-              {selected.map(p => (
-                <div key={p.player_id} className="ct-strip-chip">
-                  <span className="ct-strip-chip-name">{p.name.split(' ').pop()}</span>
-                  <button className="ct-strip-chip-x" onClick={() => removePlayer(p)}>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
 
       {/* Role validation bar - removed, rules simplified */}
 

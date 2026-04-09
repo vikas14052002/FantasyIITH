@@ -18,10 +18,11 @@ export default function AnimatedNumber({ value, duration = 600, className, style
       const progress = Math.min(elapsed / duration, 1);
       // ease-out
       const eased = 1 - Math.pow(1 - progress, 3);
-      setDisplay(Math.round(from + diff * eased));
       if (progress < 1) {
+        setDisplay(Math.round(from + diff * eased));
         frameRef.current = requestAnimationFrame(tick);
       } else {
+        setDisplay(to); // exact value — no rounding
         prevRef.current = to;
       }
     }
@@ -30,5 +31,6 @@ export default function AnimatedNumber({ value, duration = 600, className, style
     return () => cancelAnimationFrame(frameRef.current);
   }, [value, duration]);
 
-  return <span className={className} style={style}>{display}</span>;
+  const formatted = Number.isInteger(display) ? display : display.toFixed(1);
+  return <span className={className} style={style}>{formatted}</span>;
 }
