@@ -43,7 +43,35 @@ export default function TeamPreview() {
       p_requesting_user_id: user?.id,
     });
 
-    setPlayers(securedPlayers || []);
+    let resolvedPlayers = securedPlayers || [];
+
+    // If team_players empty (encrypted, not yet revealed) and this is our own team, decrypt via edge function
+    if (resolvedPlayers.length === 0 && teamData.user_id === user?.id && teamData.picks_encrypted) {
+      const { data: picksData } = await supabase.functions.invoke('get-my-picks', {
+        body: { userId: user.id, teamId },
+      });
+      if (picksData?.picks) {
+        const allPicks = [
+          ...(picksData.picks.starters || []).map(p => ({ ...p, is_backup: false, backup_order: null })),
+          ...(picksData.picks.backups || []).map(p => ({ ...p, is_backup: true, is_captain: false, is_vice_captain: false })),
+        ];
+        // Fetch image_url from match_players
+        const playerIds = allPicks.map(p => p.player_id);
+        const { data: playerRows } = await supabase
+          .from('match_players')
+          .select('player_id, image_url')
+          .eq('match_id', teamData.match_id)
+          .in('player_id', playerIds);
+        const imgMap = new Map((playerRows || []).map(r => [r.player_id, r.image_url]));
+        resolvedPlayers = allPicks.map(p => ({
+          ...p,
+          image_url: imgMap.get(p.player_id) || null,
+          fantasy_points: 0,
+        }));
+      }
+    }
+
+    setPlayers(resolvedPlayers);
 
     // Fetch match_players stats for the breakdown panel
     if (teamData.match_id) {

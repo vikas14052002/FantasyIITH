@@ -860,11 +860,53 @@ function PointsTab({ matches }) {
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
+function RevealPicksTab({ matches }) {
+  const [matchId, setMatchId] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState('');
+
+  async function handleReveal() {
+    if (!matchId) { setResult('Error: select a match'); return; }
+    setLoading(true);
+    setResult('');
+    try {
+      const { data, error } = await supabase.functions.invoke('reveal-match-picks', {
+        body: { matchId },
+      });
+      if (error || data?.error) setResult('Error: ' + (data?.error || error?.message));
+      else setResult(`Revealed ${data.revealed} / ${data.total} teams${data.errors?.length ? ' — errors: ' + data.errors.join(', ') : ''}`);
+    } catch (err) {
+      setResult('Error: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div>
+      <SectionTitle>Reveal Encrypted Picks</SectionTitle>
+      <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 16 }}>
+        Decrypts team picks into team_players after match starts. Safe to run multiple times (idempotent).
+      </p>
+      <MatchSelect matches={matches} value={matchId} onChange={setMatchId} />
+      <SmallBtn
+        onClick={handleReveal}
+        loading={loading}
+        disabled={!matchId}
+        label="Reveal Picks"
+        loadingLabel="Revealing…"
+      />
+      <StatusMsg msg={result} />
+    </div>
+  );
+}
+
 const TABS = [
   { key: 'sync',    label: 'Sync' },
   { key: 'lineup',  label: 'Lineup' },
   { key: 'players', label: 'Players' },
   { key: 'points',  label: 'Points' },
+  { key: 'picks',   label: 'Picks' },
 ];
 
 export default function Admin() {
@@ -906,6 +948,7 @@ export default function Admin() {
       {tab === 'lineup'  && <LineupTab matches={matches} />}
       {tab === 'players' && <PlayersTab matches={matches} />}
       {tab === 'points'  && <PointsTab matches={matches} />}
+      {tab === 'picks'   && <RevealPicksTab matches={matches} />}
     </div>
   );
 }

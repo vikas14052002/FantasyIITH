@@ -67,11 +67,19 @@ export default function CreateTeam() {
     const allPlayers = playersRes.data || [];
     setPlayers(allPlayers);
 
-    // Fetch selection percentages
-    const { data: pctData } = await supabase.rpc('get_player_selection_pct', { p_match_id: matchId });
-    if (pctData) {
+    // Fetch selection percentages from aggregate counts table (no individual attribution)
+    const { data: countData } = await supabase
+      .from('team_pick_counts')
+      .select('player_id, count')
+      .eq('match_id', matchId);
+    if (countData && countData.length > 0) {
+      const { count: teamCount } = await supabase
+        .from('teams')
+        .select('id', { count: 'exact', head: true })
+        .eq('match_id', matchId);
+      const divisor = teamCount || 1;
       const pctMap = {};
-      pctData.forEach(p => { pctMap[p.player_id] = p.pct; });
+      countData.forEach(r => { pctMap[r.player_id] = Math.round((r.count / divisor) * 100); });
       setSelectionPct(pctMap);
     }
 
@@ -87,16 +95,16 @@ export default function CreateTeam() {
 
       if (existingTeam) {
         setIsEditing(true);
-        const { data: teamPlayers } = await supabase
-          .from('team_players')
-          .select('player_id, is_captain, is_vice_captain')
-          .eq('team_id', existingTeam.id);
+        const { data: picksData, error: picksErr } = await supabase.functions.invoke('get-my-picks', {
+          body: { userId: user.id, teamId: existingTeam.id },
+        });
 
-        if (teamPlayers) {
-          const selectedIds = new Set(teamPlayers.map(tp => tp.player_id));
+        if (!picksErr && picksData?.picks) {
+          const starters = picksData.picks.starters || [];
+          const selectedIds = new Set(starters.map(tp => tp.player_id));
           setSelected(allPlayers.filter(p => selectedIds.has(p.player_id)));
-          const cap = teamPlayers.find(tp => tp.is_captain);
-          const vc = teamPlayers.find(tp => tp.is_vice_captain);
+          const cap = starters.find(tp => tp.is_captain);
+          const vc = starters.find(tp => tp.is_vice_captain);
           if (cap) setExistingCaptainId(cap.player_id);
           if (vc) setExistingVcId(vc.player_id);
         }

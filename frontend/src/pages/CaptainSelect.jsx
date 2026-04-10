@@ -62,114 +62,27 @@ export default function CaptainSelect() {
     }
 
     const totalCredits = players.reduce((s, p) => s + p.credits, 0);
+    const allPlayers = [
+      ...players.map(p => ({ ...p, is_backup: false, backup_order: null })),
+      ...backupPlayers.map((p, i) => ({ ...p, is_backup: true, backup_order: i + 1 })),
+    ];
 
-    // Create team
-    const { data: team, error: teamError } = await supabase
-      .from('teams')
-      .insert({
-        user_id: user.id,
-        match_id: matchId,
-        league_id: leagueId,
-        total_credits: totalCredits,
-      })
-      .select()
-      .single();
+    const { data, error } = await supabase.functions.invoke('save-team', {
+      body: { userId: user.id, players: allPlayers, matchId, leagueId, captainId, vcId, totalCredits },
+    });
 
-    if (teamError) {
-      if (teamError.code === '23505') {
-        // Already has a team - update it
-        const { data: existing } = await supabase
-          .from('teams')
-          .select('id')
-          .eq('user_id', user.id)
-          .eq('match_id', matchId)
-          .eq('league_id', leagueId)
-          .single();
-
-        if (existing) {
-          await supabase.from('team_players').delete().eq('team_id', existing.id);
-          await supabase.from('teams').update({ total_credits: totalCredits }).eq('id', existing.id);
-
-          const teamPlayers = players.map(p => ({
-            team_id: existing.id,
-            player_id: p.player_id,
-            name: p.name,
-            team: p.team,
-            role: p.role,
-            credits: p.credits,
-            is_captain: p.player_id === captainId,
-            is_vice_captain: p.player_id === vcId,
-            is_backup: false,
-            backup_order: null,
-          }));
-
-          // Add backups
-          backupPlayers.forEach((p, i) => {
-            teamPlayers.push({
-              team_id: existing.id,
-              player_id: p.player_id,
-              name: p.name,
-              team: p.team,
-              role: p.role,
-              credits: p.credits,
-              is_captain: false,
-              is_vice_captain: false,
-              is_backup: true,
-              backup_order: i + 1,
-            });
-          });
-
-          await supabase.from('team_players').insert(teamPlayers);
-          sessionStorage.removeItem('selectedPlayers');
-          sessionStorage.removeItem('backupPlayers');
-          sessionStorage.removeItem('allPlayers');
-          sessionStorage.removeItem('existingCaptainId');
-          sessionStorage.removeItem('existingVcId');
-          navigate(`/team-preview/${existing.id}`);
-          return;
-        }
-      }
-      alert(teamError.message);
+    if (error || !data?.teamId) {
+      alert(data?.error || error?.message || 'Failed to save team');
       setSaving(false);
       return;
     }
 
-    // Insert team players (11 starters + backups)
-    const teamPlayers = players.map(p => ({
-      team_id: team.id,
-      player_id: p.player_id,
-      name: p.name,
-      team: p.team,
-      role: p.role,
-      credits: p.credits,
-      is_captain: p.player_id === captainId,
-      is_vice_captain: p.player_id === vcId,
-      is_backup: false,
-      backup_order: null,
-    }));
-
-    backupPlayers.forEach((p, i) => {
-      teamPlayers.push({
-        team_id: team.id,
-        player_id: p.player_id,
-        name: p.name,
-        team: p.team,
-        role: p.role,
-        credits: p.credits,
-        is_captain: false,
-        is_vice_captain: false,
-        is_backup: true,
-        backup_order: i + 1,
-      });
-    });
-
-    const { error: playersError } = await supabase.from('team_players').insert(teamPlayers);
-    if (playersError) { alert(playersError.message); setSaving(false); return; }
-
     sessionStorage.removeItem('selectedPlayers');
     sessionStorage.removeItem('backupPlayers');
     sessionStorage.removeItem('allPlayers');
-    navigate(`/team-preview/${team.id}`);
+    sessionStorage.removeItem('existingCaptainId');
+    sessionStorage.removeItem('existingVcId');
+    navigate(`/team-preview/${data.teamId}`);
   };
 
   if (players.length === 0) {
