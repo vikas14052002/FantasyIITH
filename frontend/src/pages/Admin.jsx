@@ -925,6 +925,212 @@ function LeaguesTab() {
   );
 }
 
+// ─── My11 Sync Tab ────────────────────────────────────────────────────────────
+
+function M11SyncTab({ matches }) {
+  const [leagues, setLeagues] = useState([]);
+  const [leagueId, setLeagueId] = useState('');
+  const [matchId, setMatchId] = useState('');
+  const [members, setMembers] = useState([]);
+  const [m11Usernames, setM11Usernames] = useState({}); // appUserId → m11Username
+  const [m11MatchId, setM11MatchId] = useState('');
+  const [m11ContestId, setM11ContestId] = useState('');
+  const [cookie, setCookie] = useState('');
+  const [mappingSaved, setMappingSaved] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [savingMapping, setSavingMapping] = useState(false);
+  const [result, setResult] = useState(null);
+  const [deleting, setDeleting] = useState(null);
+  const [deleteMsg, setDeleteMsg] = useState('');
+
+  useEffect(() => {
+    supabase.from('leagues').select('id, name, invite_code').order('name').then(({ data }) => setLeagues(data || []));
+  }, []);
+
+  async function onLeagueChange(id) {
+    setLeagueId(id);
+    setMembers([]);
+    setResult(null);
+    setMappingSaved(false);
+    if (!id) return;
+
+    const [membersRes, mappingRes] = await Promise.all([
+      supabase.from('league_members').select('user_id, users(id, name, email)').eq('league_id', id),
+      supabase.from('m11_user_mapping').select('user_id, m11_username').eq('league_id', id),
+    ]);
+
+    const users = (membersRes.data || []).map(m => m.users).filter(Boolean);
+    setMembers(users);
+
+    const saved = {};
+    for (const row of (mappingRes.data || [])) saved[row.user_id] = row.m11_username;
+    const initial = {};
+    for (const u of users) initial[u.id] = saved[u.id] ?? '';
+    setM11Usernames(initial);
+  }
+
+  async function saveMapping() {
+    setSavingMapping(true);
+    setMappingSaved(false);
+    const rows = Object.entries(m11Usernames)
+      .filter(([, m11]) => m11.trim())
+      .map(([userId, m11Username]) => ({ league_id: leagueId, user_id: userId, m11_username: m11Username.trim() }));
+    const { error } = await supabase.from('m11_user_mapping').upsert(rows, { onConflict: 'league_id,user_id' });
+    setSavingMapping(false);
+    if (error) alert('Save failed: ' + error.message);
+    else setMappingSaved(true);
+  }
+
+  async function runSync() {
+    if (!leagueId || !matchId || !m11MatchId || !m11ContestId || !cookie) return;
+    setSyncing(true);
+    setResult(null);
+
+    // Build usernameMapping: m11Username → appUserId
+    const usernameMapping = {};
+    for (const [appUserId, m11Username] of Object.entries(m11Usernames)) {
+      if (m11Username.trim()) usernameMapping[m11Username.trim()] = appUserId;
+    }
+
+    try {
+      const res = await fetch(`${FUNCTIONS_URL}/populate-m11-league`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl3cW1od2drY3RtZXR6c2RidXJqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3OTg5MTIsImV4cCI6MjA5MDM3NDkxMn0.THJI80WqrDVZ-sC9Gtm9_TUvVN-oXENLc1y9hGLnQl8' },
+        body: JSON.stringify({ m11MatchId: Number(m11MatchId), m11ContestId: Number(m11ContestId), leagueId, appMatchId: matchId, cookie, usernameMapping }),
+      });
+      setResult(await res.json());
+    } catch (err) {
+      setResult({ error: err.message });
+    } finally {
+      setSyncing(false);
+    }
+  }
+
+  async function deleteTeam(userId) {
+    if (!leagueId || !matchId) return;
+    if (!window.confirm('Delete this user\'s team for the selected match?')) return;
+    setDeleting(userId);
+    setDeleteMsg('');
+    const { data: team } = await supabase.from('teams').select('id').eq('league_id', leagueId).eq('match_id', matchId).eq('user_id', userId).maybeSingle();
+    if (!team) { setDeleteMsg('No team found for this user+match.'); setDeleting(null); return; }
+    await supabase.from('scores').delete().eq('team_id', team.id);
+    await supabase.from('team_players').delete().eq('team_id', team.id);
+    const { error } = await supabase.from('teams').delete().eq('id', team.id);
+    setDeleting(null);
+    setDeleteMsg(error ? 'Error: ' + error.message : 'Team deleted.');
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+
+      {/* League + match selectors */}
+      <div className="card">
+        <SectionTitle>Select League & Match</SectionTitle>
+        <select className="input" value={leagueId} onChange={e => onLeagueChange(e.target.value)} style={{ marginBottom: 10 }}>
+          <option value="">Select league…</option>
+          {leagues.map(l => <option key={l.id} value={l.id}>{l.name} ({l.invite_code})</option>)}
+        </select>
+        <MatchSelect matches={matches} value={matchId} onChange={setMatchId} />
+      </div>
+
+      {/* Username mapping */}
+      {members.length > 0 && (
+        <div className="card">
+          <SectionTitle>My11Circle Username Mapping</SectionTitle>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
+            {members.map(u => (
+              <div key={u.id} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: 10, alignItems: 'center' }}>
+                <div style={{ fontSize: 13, fontWeight: 600 }}>{u.name}</div>
+                <input
+                  className="input"
+                  placeholder="My11 username"
+                  value={m11Usernames[u.id] ?? ''}
+                  onChange={e => setM11Usernames(p => ({ ...p, [u.id]: e.target.value }))}
+                  style={{ fontSize: 12 }}
+                />
+                <SmallBtn
+                  onClick={() => deleteTeam(u.id)}
+                  loading={deleting === u.id}
+                  disabled={!matchId}
+                  label="Del Team"
+                  loadingLabel="…"
+                  danger
+                />
+              </div>
+            ))}
+          </div>
+          <SmallBtn onClick={saveMapping} loading={savingMapping} label="Save Mapping" loadingLabel="Saving…" />
+          {mappingSaved && <div style={{ fontSize: 11, color: 'var(--green)', marginTop: 6 }}>Mapping saved</div>}
+          {deleteMsg && <div style={{ fontSize: 11, color: deleteMsg.startsWith('Error') ? 'var(--red-primary)' : 'var(--green)', marginTop: 6 }}>{deleteMsg}</div>}
+        </div>
+      )}
+
+      {/* Sync form */}
+      <div className="card">
+        <SectionTitle>My11Circle Contest</SectionTitle>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <input className="input" placeholder="My11 Match ID" value={m11MatchId} onChange={e => setM11MatchId(e.target.value)} />
+            <input className="input" placeholder="Contest ID" value={m11ContestId} onChange={e => setM11ContestId(e.target.value)} />
+          </div>
+          <textarea
+            className="input"
+            placeholder="Paste cookie string from DevTools…"
+            value={cookie}
+            onChange={e => setCookie(e.target.value)}
+            rows={3}
+            style={{ fontSize: 11, fontFamily: 'monospace', resize: 'vertical' }}
+          />
+          <SmallBtn
+            onClick={runSync}
+            loading={syncing}
+            disabled={!leagueId || !matchId || !m11MatchId || !m11ContestId || !cookie}
+            label="Sync Teams"
+            loadingLabel="Syncing…"
+          />
+        </div>
+      </div>
+
+      {/* Results */}
+      {result && (
+        <div className="card">
+          <SectionTitle>Result</SectionTitle>
+          <pre style={{ fontSize: 10, color: 'var(--text-muted)', background: 'var(--bg-elevated)', padding: 8, borderRadius: 6, overflowX: 'auto', marginBottom: 10 }}>{JSON.stringify(result, null, 2)}</pre>
+          {result.error
+            ? <div style={{ color: 'var(--red-primary)', fontSize: 12 }}>Error: {result.error}</div>
+            : (
+              <>
+                <div style={{ fontSize: 12, marginBottom: 10, color: 'var(--text-secondary)' }}>
+                  Created: <strong style={{ color: 'var(--green)' }}>{result.created}</strong>
+                  {' · '}Skipped: <strong>{result.skipped}</strong>
+                  {' · '}Errors: <strong style={{ color: result.errors > 0 ? 'var(--red-primary)' : undefined }}>{result.errors}</strong>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {(result.details || []).map((d, i) => (
+                    <div key={i} style={{
+                      fontSize: 11, padding: '8px 10px', borderRadius: 8,
+                      background: d.status === 'created' ? 'rgba(76,175,80,0.08)' : d.status === 'error' ? 'rgba(217,30,54,0.08)' : 'var(--bg-elevated)',
+                      border: `1px solid ${d.status === 'created' ? 'rgba(76,175,80,0.2)' : d.status === 'error' ? 'rgba(217,30,54,0.2)' : 'var(--border)'}`,
+                    }}>
+                      <span style={{ fontWeight: 700 }}>{d.m11Username}</span>
+                      {' → '}
+                      <span style={{ color: d.status === 'created' ? 'var(--green)' : d.status === 'error' ? 'var(--red-primary)' : 'var(--text-muted)' }}>
+                        {d.status}
+                      </span>
+                      {d.reason && <span style={{ color: 'var(--text-muted)' }}> ({d.reason})</span>}
+                      {d.status === 'created' && <span style={{ color: 'var(--text-muted)' }}> — rank {d.rank}, {d.players} players{d.unresolved?.length > 0 ? `, ⚠ unresolved: ${d.unresolved.join(', ')}` : ''}</span>}
+                    </div>
+                  ))}
+                </div>
+              </>
+            )
+          }
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 function RevealPicksTab({ matches }) {
@@ -975,6 +1181,7 @@ const TABS = [
   { key: 'points',  label: 'Points' },
   { key: 'picks',   label: 'Picks' },
   { key: 'leagues', label: 'Leagues' },
+  { key: 'm11',     label: 'My11 Sync' },
 ];
 
 export default function Admin() {
@@ -1018,6 +1225,7 @@ export default function Admin() {
       {tab === 'points'  && <PointsTab matches={matches} />}
       {tab === 'picks'   && <RevealPicksTab matches={matches} />}
       {tab === 'leagues' && <LeaguesTab />}
+      {tab === 'm11'     && <M11SyncTab matches={matches} />}
     </div>
   );
 }
