@@ -19,6 +19,7 @@ const STAT_FIELDS = [
   { key: 'catches', label: 'Catches' },
   { key: 'stumpings', label: 'Stumpings' },
   { key: 'run_outs', label: 'Run Outs' },
+  { key: 'direct_run_outs', label: 'Direct Run Outs' },
 ];
 
 // ─── Shared ───────────────────────────────────────────────────────────────────
@@ -717,7 +718,7 @@ function PointsTab({ matches }) {
     if (!mid) { setPlayers([]); return; }
     const { data } = await supabase
       .from('match_players')
-      .select('id, name, team, role, is_playing, is_impact_sub, fantasy_points, runs, balls, fours, sixes, wickets, overs_bowled, runs_conceded, maidens, dots_bowled, lbw_bowled_wickets, catches, stumpings, run_outs')
+      .select('id, name, team, role, is_playing, is_impact_sub, fantasy_points, runs, balls, fours, sixes, wickets, overs_bowled, runs_conceded, maidens, dots_bowled, lbw_bowled_wickets, catches, stumpings, run_outs, direct_run_outs')
       .eq('match_id', mid)
       .order('fantasy_points', { ascending: false, nullsFirst: false });
     setPlayers(data || []);

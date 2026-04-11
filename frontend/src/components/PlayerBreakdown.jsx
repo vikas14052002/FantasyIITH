@@ -3,7 +3,7 @@ import './PlayerBreakdown.css';
 
 export default function PlayerBreakdown({ player, onClose }) {
   const p = player;
-  const c = { run: 1, four: 4, six: 6, halfCentury: 8, century: 16, duck: -2, wicket: 30, maiden: 12, catch: 8, stumping: 12, runOut: 6, inPlayingXI: 4, dotBall: 1, lbwBowledBonus: 8, threeWicketBonus: 4, fourWicketBonus: 8, fiveWicketBonus: 12, twentyFiveBonus: 4, seventyFiveBonus: 12, threeCatchBonus: 4 };
+  const c = { run: 1, four: 4, six: 6, halfCentury: 8, century: 16, duck: -2, wicket: 30, maiden: 12, catch: 8, stumping: 12, runOut: 6, directRunOut: 12, inPlayingXI: 4, dotBall: 1, lbwBowledBonus: 8, threeWicketBonus: 4, fourWicketBonus: 8, fiveWicketBonus: 12, twentyFiveBonus: 4, seventyFiveBonus: 12, threeCatchBonus: 4 };
   const lines = []; let total = 0;
   function add(label, value, pts) { if (pts === 0) return; lines.push({ label, value, pts }); total += pts; }
   if (isFantasyRosterActive(p)) add('Playing XI', '', c.inPlayingXI);
@@ -50,6 +50,7 @@ export default function PlayerBreakdown({ player, onClose }) {
   if (p.catches>0) { add('Catches', `${p.catches} x ${c.catch}`, p.catches*c.catch); if (p.catches>=3) add('3 Catch Bonus', '', c.threeCatchBonus); }
   if (p.stumpings>0) add('Stumpings', `${p.stumpings} x ${c.stumping}`, p.stumpings*c.stumping);
   if (p.run_outs > 0) add('Run Outs', `${p.run_outs} x ${c.runOut}`, p.run_outs * c.runOut);
+  if (p.direct_run_outs > 0) add('Direct Run Outs', `${p.direct_run_outs} x 12`, p.direct_run_outs * 12);
 
   const multiplier = p.is_captain ? 2 : p.is_vice_captain ? 1.5 : 1;
   const displayTotal = total * multiplier;

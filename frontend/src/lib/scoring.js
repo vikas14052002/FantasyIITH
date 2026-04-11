@@ -17,6 +17,7 @@ export function computePlayerPoints(stats, config) {
   points += (stats.catches || 0) * config.catch;
   points += (stats.stumpings || 0) * config.stumping;
   points += (stats.run_outs || 0) * config.runOut;
+  points += (stats.direct_run_outs || 0) * (config.directRunOut ?? 12);
 
   return points;
 }
