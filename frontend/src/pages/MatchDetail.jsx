@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { getUser } from '../lib/auth';
 import { getTeamLogo } from '../lib/teamLogos';
@@ -13,6 +13,7 @@ import './TeamCompare.css';
 
 export default function MatchDetail() {
   const { id } = useParams();
+  const location = useLocation();
   const navigate = useNavigate();
   const user = getUser();
   const [match, setMatch] = useState(null);
@@ -41,6 +42,16 @@ export default function MatchDetail() {
 
   useEffect(() => { loadMatch(); }, [id]);
   useEffect(() => { if (selectedLeague) loadLeagueData(); }, [selectedLeague]);
+
+  // Handle phone back button closing comparison overlay instead of navigating away
+  useEffect(() => {
+    if (comparison && !comparison.error) {
+      window.history.pushState({ comparison: true }, '');
+      const onPop = () => { setComparison(null); setCompareWith(null); };
+      window.addEventListener('popstate', onPop);
+      return () => window.removeEventListener('popstate', onPop);
+    }
+  }, [comparison]);
 
   // Inject SportsEvent JSON-LD
   useEffect(() => {
@@ -72,7 +83,7 @@ export default function MatchDetail() {
     if (!match || match.status !== 'live') return;
     const interval = setInterval(() => { refreshData(); }, 30000);
     return () => clearInterval(interval);
-  }, [match?.status, id]);
+  }, [match?.status, id, selectedLeague]);
 
   async function loadMatch() {
     const [matchRes, playersRes, leagueRes] = await Promise.all([
@@ -86,8 +97,10 @@ export default function MatchDetail() {
     const l = (leagueRes.data || []).map(lm => lm.leagues);
     setLeagues(l);
     if (l.length > 0 && !selectedLeague) {
+      const fromNav = location.state?.leagueId;
       const saved = localStorage.getItem(`md_league_${id}`);
-      const initial = (saved && l.some(x => x.id === saved)) ? saved : l[0].id;
+      const initial = (fromNav && l.some(x => x.id === fromNav)) ? fromNav
+        : (saved && l.some(x => x.id === saved)) ? saved : l[0].id;
       setSelectedLeague(initial);
     }
     setLoading(false);
@@ -265,12 +278,6 @@ export default function MatchDetail() {
       if (!sameRole) cvSharedIds.add(p1.player_id);
     });
 
-    const onlyT1 = t1Players.filter(p => !t2Map.has(p.player_id));
-    const onlyT2 = t2Players.filter(p => !t1Map.has(p.player_id));
-    const common = t1Players
-      .filter(p => t2Map.has(p.player_id) && !cvSharedIds.has(p.player_id))
-      .map(p1 => ({ t1: p1, t2: t2Map.get(p1.player_id) }));
-
     setComparison({
       error: false, user1: leagueMembers.find(m => m.id === user.id), user2: leagueMembers.find(m => m.id === otherId),
       team1: t1, team2: t2, t1Map, t2Map, captain1, captain2, vc1, vc2, cvSharedIds,
@@ -382,7 +389,7 @@ export default function MatchDetail() {
                 return (
                   <div className="md-cmp-overlay fade-in">
                     <div className="md-cmp-overlay-header">
-                      <button className="md-cmp-back-btn" onClick={() => { setComparison(null); setCompareWith(null); }}>
+                      <button className="md-cmp-back-btn" onClick={() => window.history.back()}>
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5"/><polyline points="12 19 5 12 12 5"/></svg>
                         Back
                       </button>

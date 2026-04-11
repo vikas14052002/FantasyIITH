@@ -173,6 +173,104 @@
   margin-bottom: 4px;
 }
 
+/* ── Leave Confirm Sheet ── */
+.leave-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 200;
+  animation: fadeInOverlay 0.2s ease;
+}
+
+.leave-sheet {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 480px;
+  background: var(--bg-surface);
+  border-radius: 20px 20px 0 0;
+  z-index: 201;
+  animation: slideUp 0.3s ease;
+  padding: 8px 20px 32px;
+  padding-bottom: calc(32px + env(safe-area-inset-bottom));
+}
+
+.leave-sheet-handle {
+  width: 36px;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  margin: 10px auto 20px;
+}
+
+.leave-sheet-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(217, 30, 54, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+}
+
+.leave-sheet-title {
+  font-size: 17px;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.leave-sheet-body {
+  font-size: 13px;
+  color: var(--text-secondary);
+  text-align: center;
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+.leave-sheet-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.leave-sheet-btn-danger {
+  width: 100%;
+  padding: 14px;
+  border-radius: 12px;
+  border: none;
+  background: var(--red-gradient);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  font-family: 'Poppins', sans-serif;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(217, 30, 54, 0.35);
+  transition: opacity 0.15s;
+}
+
+.leave-sheet-btn-danger:active { opacity: 0.85; }
+.leave-sheet-btn-danger:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.leave-sheet-btn-cancel {
+  width: 100%;
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 15px;
+  font-weight: 600;
+  font-family: 'Poppins', sans-serif;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.leave-sheet-btn-cancel:active { background: var(--bg-elevated); }
+
 /* ── Breakdown Sheet ── */
 .ld-breakdown-sheet {
   max-height: 70vh;
@@ -239,3 +337,91 @@
   border-top: 1px solid var(--border);
   margin-top: 4px;
 }
+
+/* ── H2H Tab ── */
+.h2h-record {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.h2h-w { color: var(--green); }
+.h2h-l { color: var(--red-primary); }
+.h2h-d { color: var(--text-muted); }
+.h2h-sep { color: var(--border); }
+
+.h2h-diff {
+  font-size: 12px;
+  font-weight: 700;
+  min-width: 36px;
+  text-align: right;
+  color: var(--text-muted);
+}
+.h2h-diff.pos { color: var(--green); }
+.h2h-diff.neg { color: var(--red-primary); }
+
+.h2h-breakdown {
+  background: var(--bg-elevated);
+  border-radius: 10px;
+  margin: 0 0 8px;
+  overflow: hidden;
+}
+
+.h2h-match-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.h2h-match-row:last-child { border-bottom: none; }
+
+.h2h-match-label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.h2h-match-num {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.h2h-match-teams {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.h2h-match-scores {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.h2h-score {
+  font-size: 15px;
+  font-weight: 700;
+}
+.h2h-score.win  { color: var(--green); }
+.h2h-score.loss { color: var(--text-secondary); }
+.h2h-score.draw { color: var(--text-secondary); }
+.h2h-score.opp  { color: var(--text-secondary); font-size: 14px; }
+
+.h2h-vs {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.h2h-result-badge {
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 6px;
+  letter-spacing: 0.3px;
+}
+.h2h-result-badge.win  { background: rgba(76,175,80,0.15); color: var(--green); }
+.h2h-result-badge.loss { background: rgba(217,30,54,0.12); color: var(--red-primary); }
+.h2h-result-badge.draw { background: var(--bg-surface); color: var(--text-muted); }

@@ -750,10 +750,10 @@ function PointsTab({ matches }) {
     setRecalcing(true);
     setMsg('');
     try {
-      const { error } = await supabase.rpc('calculate_match_scores_impact_and_fantasy', { p_match_id: matchId });
+      const { data, error } = await supabase.rpc('calculate_match_scores', { p_match_id: matchId });
       if (error) throw error;
-      setMsg('All scores recalculated!');
       await loadPlayers(matchId);
+      setMsg(`Recalculation complete. Result: ${data !== null && data !== undefined ? JSON.stringify(data) : 'no data returned (void function)'}`);
     } catch (err) {
       setMsg('Error: ' + err.message);
     }
@@ -858,6 +858,72 @@ function PointsTab({ matches }) {
   );
 }
 
+// ─── Leagues Tab ──────────────────────────────────────────────────────────────
+
+function LeaguesTab() {
+  const [leagues, setLeagues] = useState([]);
+  const [selectedLeague, setSelectedLeague] = useState('');
+  const [members, setMembers] = useState([]);
+  const [loadingMembers, setLoadingMembers] = useState(false);
+  const [removing, setRemoving] = useState(null);
+  const [msg, setMsg] = useState('');
+
+  useEffect(() => {
+    supabase.from('leagues').select('id, name, invite_code').order('name').then(({ data }) => setLeagues(data || []));
+  }, []);
+
+  async function loadMembers(leagueId) {
+    setSelectedLeague(leagueId);
+    setMembers([]);
+    setMsg('');
+    if (!leagueId) return;
+    setLoadingMembers(true);
+    const { data } = await supabase.from('league_members').select('user_id, users(id, name, email)').eq('league_id', leagueId);
+    setMembers((data || []).map(m => m.users));
+    setLoadingMembers(false);
+  }
+
+  async function removeMember(userId) {
+    if (!window.confirm(`Remove this member from the league?`)) return;
+    setRemoving(userId);
+    setMsg('');
+    const { error } = await supabase.from('league_members').delete().eq('league_id', selectedLeague).eq('user_id', userId);
+    if (error) { setMsg('Error: ' + error.message); }
+    else {
+      setMembers(m => m.filter(u => u.id !== userId));
+      setMsg('Member removed.');
+    }
+    setRemoving(null);
+  }
+
+  return (
+    <div>
+      <SectionTitle>Remove Member from League</SectionTitle>
+      <select className="input" value={selectedLeague} onChange={e => loadMembers(e.target.value)} style={{ marginBottom: 16 }}>
+        <option value="">Select league…</option>
+        {leagues.map(l => <option key={l.id} value={l.id}>{l.name} ({l.invite_code})</option>)}
+      </select>
+      {loadingMembers && <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Loading members…</p>}
+      {members.map(u => (
+        <div key={u.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 600 }}>{u.name}</div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{u.email}</div>
+          </div>
+          <SmallBtn
+            onClick={() => removeMember(u.id)}
+            loading={removing === u.id}
+            loadingLabel="Removing…"
+            label="Remove"
+            danger
+          />
+        </div>
+      ))}
+      <StatusMsg msg={msg} />
+    </div>
+  );
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 function RevealPicksTab({ matches }) {
@@ -907,6 +973,7 @@ const TABS = [
   { key: 'players', label: 'Players' },
   { key: 'points',  label: 'Points' },
   { key: 'picks',   label: 'Picks' },
+  { key: 'leagues', label: 'Leagues' },
 ];
 
 export default function Admin() {
@@ -949,6 +1016,7 @@ export default function Admin() {
       {tab === 'players' && <PlayersTab matches={matches} />}
       {tab === 'points'  && <PointsTab matches={matches} />}
       {tab === 'picks'   && <RevealPicksTab matches={matches} />}
+      {tab === 'leagues' && <LeaguesTab />}
     </div>
   );
 }

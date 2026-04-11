@@ -29,7 +29,7 @@ export default function MatchCard({ match, leagueId, hasTeam: hasTeamProp }) {
   const teamExists = hasTeamProp !== undefined ? hasTeamProp : !!existingTeam;
 
   const handleClick = () => {
-    navigate(`/match/${match.id}`);
+    navigate(`/match/${match.id}`, leagueId ? { state: { leagueId } } : undefined);
   };
 
   const logo1 = getTeamLogo(match.team1_short);
