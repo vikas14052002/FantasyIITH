@@ -38,6 +38,7 @@ export default function MatchDetail() {
   const [sortDir, setSortDir] = useState('desc');
   const [captainMap, setCaptainMap] = useState(new Map());
   const [vcMap, setVcMap] = useState(new Map());
+  const [isM11League, setIsM11League] = useState(false);
   const swipeStartX = useRef(null);
 
   useEffect(() => { loadMatch(); }, [id]);
@@ -118,10 +119,12 @@ export default function MatchDetail() {
   }
 
   async function loadLeagueData() {
-    const [teamsRes, membersRes] = await Promise.all([
+    const [teamsRes, membersRes, m11Res] = await Promise.all([
       supabase.from('teams').select('id, user_id, total_points').eq('match_id', id).eq('league_id', selectedLeague),
       supabase.from('league_members').select('user_id, users(*)').eq('league_id', selectedLeague),
+      supabase.from('m11_sync_config').select('synced_at').eq('league_id', selectedLeague).eq('match_id', id).maybeSingle(),
     ]);
+    setIsM11League(!!(m11Res.data?.synced_at));
     const teams = teamsRes.data || [];
     setLeagueTeams(teams);
     setLeagueMembers((membersRes.data || []).map(m => m.users));
@@ -352,6 +355,11 @@ export default function MatchDetail() {
       })() : activeTab === 'leaderboard' ? (
         <div>
           {leagues.length > 1 && <select className="input" value={selectedLeague} onChange={e => { setSelectedLeague(e.target.value); localStorage.setItem(`md_league_${id}`, e.target.value); setCompareMode(false); setComparison(null); setCompareWith(null); }} style={{ marginBottom: 12 }}>{leagues.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</select>}
+          {isM11League && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 6, background: 'var(--bg-elevated)', border: '1px solid var(--border)', marginBottom: 10, fontSize: 10, color: 'var(--text-muted)', fontWeight: 500 }}>
+              <span>⚡</span> Teams fetched from My11Circle
+            </div>
+          )}
           {leaderboard.length === 0 ? <div className="empty"><div className="empty-icon">📊</div><p className="empty-text">No one has joined yet</p></div> : (
             <div className="md-lb">
               <div className="md-lb-header">

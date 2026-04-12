@@ -1012,6 +1012,13 @@ function M11SyncTab({ matches }) {
     setSyncing(true);
     setResult(null);
 
+    // Auto-save config before syncing
+    await supabase.from('m11_sync_config').upsert(
+      { league_id: leagueId, match_id: matchId, m11_match_id: m11MatchId, m11_contest_id: m11ContestId, cookie, updated_at: new Date().toISOString() },
+      { onConflict: 'league_id,match_id' }
+    );
+    setConfigSaved(true);
+
     // Build usernameMapping: m11Username → appUserId
     const usernameMapping = {};
     for (const [appUserId, m11Username] of Object.entries(m11Usernames)) {
