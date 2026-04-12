@@ -47,10 +47,14 @@ export default function PlayerBreakdown({ player, onClose }) {
       }
     }
   }
-  if (p.catches>0) { add('Catches', `${p.catches} x ${c.catch}`, p.catches*c.catch); if (p.catches>=3) add('3 Catch Bonus', '', c.threeCatchBonus); }
-  if (p.stumpings>0) add('Stumpings', `${p.stumpings} x ${c.stumping}`, p.stumpings*c.stumping);
-  if (p.run_outs > 0) add('Run Outs', `${p.run_outs} x ${c.runOut}`, p.run_outs * c.runOut);
-  if (p.direct_run_outs > 0) add('Direct Run Outs', `${p.direct_run_outs} x 12`, p.direct_run_outs * 12);
+  const effCatches = (p.catches||0) + (p.delta_catches||0);
+  const effStumpings = (p.stumpings||0) + (p.delta_stumpings||0);
+  const effRunOuts = (p.run_outs||0) + (p.delta_run_outs||0);
+  const effDirectRunOuts = (p.direct_run_outs||0) + (p.delta_direct_run_outs||0);
+  if (effCatches>0) { add('Catches', `${effCatches} x ${c.catch}`, effCatches*c.catch); if (effCatches>=3) add('3 Catch Bonus', '', c.threeCatchBonus); }
+  if (effStumpings>0) add('Stumpings', `${effStumpings} x ${c.stumping}`, effStumpings*c.stumping);
+  if (effRunOuts>0) add('Run Outs', `${effRunOuts} x ${c.runOut}`, effRunOuts*c.runOut);
+  if (effDirectRunOuts>0) add('Direct Run Outs', `${effDirectRunOuts} x 12`, effDirectRunOuts*12);
 
   const multiplier = p.is_captain ? 2 : p.is_vice_captain ? 1.5 : 1;
   const displayTotal = total * multiplier;
@@ -76,7 +80,7 @@ export default function PlayerBreakdown({ player, onClose }) {
           {p.sixes>0&&<div className="pb-stat"><span className="pb-stat-val">{p.sixes}</span><span className="pb-stat-label">6s</span></div>}
           {p.wickets>0&&<div className="pb-stat"><span className="pb-stat-val">{p.wickets}</span><span className="pb-stat-label">Wkts</span></div>}
           {p.overs_bowled>0&&<div className="pb-stat"><span className="pb-stat-val">{p.overs_bowled}</span><span className="pb-stat-label">Overs</span></div>}
-          {p.catches>0&&<div className="pb-stat"><span className="pb-stat-val">{p.catches}</span><span className="pb-stat-label">Catches</span></div>}
+          {effCatches>0&&<div className="pb-stat"><span className="pb-stat-val">{effCatches}</span><span className="pb-stat-label">Catches</span></div>}
         </div>
         <div className="pb-breakdown">
           <div className="pb-breakdown-title">Points Breakdown</div>

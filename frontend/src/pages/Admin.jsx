@@ -22,6 +22,13 @@ const STAT_FIELDS = [
   { key: 'direct_run_outs', label: 'Direct Run Outs' },
 ];
 
+const DELTA_FIELDS = [
+  { key: 'delta_catches', label: '+Catches' },
+  { key: 'delta_stumpings', label: '+Stumpings' },
+  { key: 'delta_run_outs', label: '+Run Outs' },
+  { key: 'delta_direct_run_outs', label: '+Direct RO' },
+];
+
 // ─── Shared ───────────────────────────────────────────────────────────────────
 
 function MatchSelect({ matches, value, onChange }) {
@@ -718,7 +725,7 @@ function PointsTab({ matches }) {
     if (!mid) { setPlayers([]); return; }
     const { data } = await supabase
       .from('match_players')
-      .select('id, name, team, role, is_playing, is_impact_sub, fantasy_points, runs, balls, fours, sixes, wickets, overs_bowled, runs_conceded, maidens, dots_bowled, lbw_bowled_wickets, catches, stumpings, run_outs, direct_run_outs')
+      .select('id, name, team, role, is_playing, is_impact_sub, fantasy_points, runs, balls, fours, sixes, wickets, overs_bowled, runs_conceded, maidens, dots_bowled, lbw_bowled_wickets, catches, stumpings, run_outs, direct_run_outs, delta_catches, delta_stumpings, delta_run_outs, delta_direct_run_outs')
       .eq('match_id', mid)
       .order('fantasy_points', { ascending: false, nullsFirst: false });
     setPlayers(data || []);
@@ -738,6 +745,7 @@ function PointsTab({ matches }) {
       const e = edits[p.id];
       const update = {};
       for (const { key } of STAT_FIELDS) update[key] = e[key] === '' ? 0 : Number(e[key]) || 0;
+      for (const { key } of DELTA_FIELDS) update[key] = e[key] === '' ? 0 : Number(e[key]) || 0;
       const { error } = await supabase.from('match_players').update(update).eq('id', p.id);
       if (error) throw error;
       setMsg(`${p.name} saved!`);
@@ -841,6 +849,28 @@ function PointsTab({ matches }) {
                               />
                             </div>
                           ))}
+                        </div>
+                        <div style={{ marginBottom: 14 }}>
+                          <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                            Manual Fielding Corrections (survive sync)
+                          </div>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
+                            {DELTA_FIELDS.map(({ key, label }) => (
+                              <div key={key}>
+                                <label style={{ fontSize: 10, color: 'var(--accent)', display: 'block', marginBottom: 4, fontWeight: 600 }}>{label}</label>
+                                <input
+                                  type="number" min="0" step="1"
+                                  value={e[key] ?? 0}
+                                  onChange={ev => setField(p.id, key, ev.target.value)}
+                                  style={{
+                                    width: '100%', padding: '8px 10px', fontSize: 13, textAlign: 'center',
+                                    background: 'var(--bg-elevated)', border: '1px solid var(--accent)',
+                                    borderRadius: 8, color: 'var(--accent)', fontFamily: 'Poppins, sans-serif',
+                                  }}
+                                />
+                              </div>
+                            ))}
+                          </div>
                         </div>
                         <button className="btn btn-primary" onClick={() => savePlayer(p)}
                           disabled={saving === p.id} style={{ minHeight: 44, fontSize: 13 }}>
