@@ -40,10 +40,10 @@ export default function PlayerBreakdown({ player, onClose }) {
         const econ = ((p.runs_conceded||0) / bowlingBalls) * 6;
         if (econ < 5) add('Economy Bonus', `Econ ${econ.toFixed(1)}`, 6);
         else if (econ < 6) add('Economy Bonus', `Econ ${econ.toFixed(1)}`, 4);
-        else if (econ <= 7) add('Economy Bonus', `Econ ${econ.toFixed(1)}`, 2);
-        else if (econ > 10 && econ <= 11) add('Economy Penalty', `Econ ${econ.toFixed(1)}`, -2);
-        else if (econ > 11 && econ <= 12) add('Economy Penalty', `Econ ${econ.toFixed(1)}`, -4);
-        else if (econ > 12) add('Economy Penalty', `Econ ${econ.toFixed(1)}`, -6);
+        else if (econ < 7) add('Economy Bonus', `Econ ${econ.toFixed(1)}`, 2);
+        else if (econ >= 10 && econ < 11) add('Economy Penalty', `Econ ${econ.toFixed(1)}`, -2);
+        else if (econ >= 11 && econ < 12) add('Economy Penalty', `Econ ${econ.toFixed(1)}`, -4);
+        else if (econ >= 12) add('Economy Penalty', `Econ ${econ.toFixed(1)}`, -6);
       }
     }
   }
