@@ -942,10 +942,34 @@ function M11SyncTab({ matches }) {
   const [result, setResult] = useState(null);
   const [deleting, setDeleting] = useState(null);
   const [deleteMsg, setDeleteMsg] = useState('');
+  const [configSaved, setConfigSaved] = useState(false);
 
   useEffect(() => {
     supabase.from('leagues').select('id, name, invite_code').order('name').then(({ data }) => setLeagues(data || []));
   }, []);
+
+  async function loadConfig(lid, mid) {
+    if (!lid || !mid) return;
+    const { data } = await supabase.from('m11_sync_config').select('*').eq('league_id', lid).eq('match_id', mid).maybeSingle();
+    if (data) {
+      setM11MatchId(data.m11_match_id ?? '');
+      setM11ContestId(data.m11_contest_id ?? '');
+      setCookie(data.cookie ?? '');
+      setConfigSaved(true);
+    } else {
+      setM11MatchId(''); setM11ContestId(''); setCookie(''); setConfigSaved(false);
+    }
+  }
+
+  async function saveConfig(lid, mid, m11mid, m11cid, ck) {
+    if (!lid || !mid || !m11mid || !m11cid) return;
+    setConfigSaved(false);
+    await supabase.from('m11_sync_config').upsert(
+      { league_id: lid, match_id: mid, m11_match_id: m11mid, m11_contest_id: m11cid, cookie: ck, updated_at: new Date().toISOString() },
+      { onConflict: 'league_id,match_id' }
+    );
+    setConfigSaved(true);
+  }
 
   async function onLeagueChange(id) {
     setLeagueId(id);
@@ -967,6 +991,8 @@ function M11SyncTab({ matches }) {
     const initial = {};
     for (const u of users) initial[u.id] = saved[u.id] ?? '';
     setM11Usernames(initial);
+
+    await loadConfig(id, matchId);
   }
 
   async function saveMapping() {
@@ -1030,7 +1056,7 @@ function M11SyncTab({ matches }) {
           <option value="">Select league…</option>
           {leagues.map(l => <option key={l.id} value={l.id}>{l.name} ({l.invite_code})</option>)}
         </select>
-        <MatchSelect matches={matches} value={matchId} onChange={setMatchId} />
+        <MatchSelect matches={matches} value={matchId} onChange={mid => { setMatchId(mid); loadConfig(leagueId, mid); }} />
       </div>
 
       {/* Username mapping */}
@@ -1070,24 +1096,32 @@ function M11SyncTab({ matches }) {
         <SectionTitle>My11Circle Contest</SectionTitle>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <input className="input" placeholder="My11 Match ID" value={m11MatchId} onChange={e => setM11MatchId(e.target.value)} />
-            <input className="input" placeholder="Contest ID" value={m11ContestId} onChange={e => setM11ContestId(e.target.value)} />
+            <input className="input" placeholder="My11 Match ID" value={m11MatchId} onChange={e => { setM11MatchId(e.target.value); setConfigSaved(false); }} />
+            <input className="input" placeholder="Contest ID" value={m11ContestId} onChange={e => { setM11ContestId(e.target.value); setConfigSaved(false); }} />
           </div>
           <textarea
             className="input"
             placeholder="Paste cookie string from DevTools…"
             value={cookie}
-            onChange={e => setCookie(e.target.value)}
+            onChange={e => { setCookie(e.target.value); setConfigSaved(false); }}
             rows={3}
             style={{ fontSize: 11, fontFamily: 'monospace', resize: 'vertical' }}
           />
-          <SmallBtn
-            onClick={runSync}
-            loading={syncing}
-            disabled={!leagueId || !matchId || !m11MatchId || !m11ContestId || !cookie}
-            label="Sync Teams"
-            loadingLabel="Syncing…"
-          />
+          <div style={{ display: 'flex', gap: 8 }}>
+            <SmallBtn
+              onClick={() => saveConfig(leagueId, matchId, m11MatchId, m11ContestId, cookie)}
+              disabled={!leagueId || !matchId || !m11MatchId || !m11ContestId}
+              label={configSaved ? 'Saved ✓' : 'Save Config'}
+              loadingLabel="Saving…"
+            />
+            <SmallBtn
+              onClick={runSync}
+              loading={syncing}
+              disabled={!leagueId || !matchId || !m11MatchId || !m11ContestId || !cookie}
+              label="Sync Teams"
+              loadingLabel="Syncing…"
+            />
+          </div>
         </div>
       </div>
 
