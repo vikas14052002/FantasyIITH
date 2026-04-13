@@ -5,42 +5,37 @@ export default function UpdatePrompt() {
   const initialVersion = useRef(null);
 
   useEffect(() => {
-    let channel;
-    const timer = setTimeout(() => {
-      // Get current version on mount
-      supabase.from('app_config').select('value').eq('key', 'build_version').single()
-        .then(({ data }) => {
-          if (data) initialVersion.current = data.value;
-        });
+    async function checkVersion() {
+      const { data } = await supabase
+        .from('app_config')
+        .select('value')
+        .eq('key', 'build_version')
+        .single();
+      if (!data) return;
 
-      // Listen for changes via Realtime
-      channel = supabase
-        .channel('app-updates')
-        .on('postgres_changes', {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'app_config',
-          filter: 'key=eq.build_version',
-        }, (payload) => {
-          const newVersion = payload.new?.value;
-          if (initialVersion.current && newVersion && newVersion !== initialVersion.current) {
-            // Silent reload
-            if (!document.querySelector('input:focus, select:focus, textarea:focus')) {
-              window.location.reload();
-            } else {
-              const reload = () => window.location.reload();
-              document.addEventListener('visibilitychange', () => {
-                if (document.visibilityState === 'visible') reload();
-              }, { once: true });
-            }
-          }
-        })
-        .subscribe();
-    }, 5000);
+      if (!initialVersion.current) {
+        initialVersion.current = data.value;
+        return;
+      }
+
+      if (data.value !== initialVersion.current) {
+        if (!document.querySelector('input:focus, select:focus, textarea:focus')) {
+          window.location.reload();
+        } else {
+          document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') window.location.reload();
+          }, { once: true });
+        }
+      }
+    }
+
+    // Delay first check so it doesn't compete with page load
+    const initial = setTimeout(checkVersion, 5000);
+    const interval = setInterval(checkVersion, 60 * 60 * 1000); // every 1 hour
 
     return () => {
-      clearTimeout(timer);
-      if (channel) supabase.removeChannel(channel);
+      clearTimeout(initial);
+      clearInterval(interval);
     };
   }, []);
 
