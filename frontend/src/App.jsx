@@ -60,7 +60,7 @@ function PageLoader() {
 
 export default function App() {
   const [showPhoneLink, setShowPhoneLink] = useState(needsPhoneLink());
-  useEffect(() => { startHeartbeat(); }, []);
+  useEffect(() => { setTimeout(startHeartbeat, 3000); }, []);
   return (
     <BrowserRouter>
       <OfflineBanner />

@@ -81,7 +81,7 @@ export default function Home() {
             <p className="empty-text">No {activeTab} matches</p>
           </div>
         ) : (
-          filtered.map(m => <MatchCard key={m.id} match={m} leagueId={firstLeague?.id} existingTeamIds={null} />)
+          filtered.map(m => <MatchCard key={m.id} match={m} leagueId={firstLeague?.id} hasTeam={null} />)
         )}
       </div>
 

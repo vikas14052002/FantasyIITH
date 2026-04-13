@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { getUser } from '../lib/auth';
+import { clearLeaguesCache } from './Leagues';
 
 function generateCode() {
   return Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -31,6 +32,7 @@ export default function CreateLeague() {
     // Auto-join creator
     await supabase.from('league_members').insert({ league_id: league.id, user_id: user.id });
 
+    clearLeaguesCache(user.id);
     setCreated(league);
     setLoading(false);
   };

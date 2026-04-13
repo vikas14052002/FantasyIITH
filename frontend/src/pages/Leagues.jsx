@@ -4,22 +4,60 @@ import { supabase } from '../lib/supabase';
 import { getUser } from '../lib/auth';
 import { LeaguesSkeleton } from '../components/Skeleton';
 
+const TTL_MS = 30 * 60 * 1000; // 30 minutes
+let leaguesCache = null;
+let leaguesCacheTs = 0;
+
+function readCache(userId) {
+  if (leaguesCache) {
+    if (Date.now() - leaguesCacheTs < TTL_MS) return leaguesCache;
+    leaguesCache = null;
+    leaguesCacheTs = 0;
+  }
+  try {
+    const raw = localStorage.getItem(`leagues_cache_${userId}`);
+    if (raw) {
+      const { data, ts } = JSON.parse(raw);
+      if (Date.now() - ts < TTL_MS) return data;
+      localStorage.removeItem(`leagues_cache_${userId}`);
+    }
+  } catch {}
+  return null;
+}
+
+function writeCache(userId, data) {
+  leaguesCache = data;
+  leaguesCacheTs = Date.now();
+  try { localStorage.setItem(`leagues_cache_${userId}`, JSON.stringify({ data, ts: Date.now() })); } catch {}
+}
+
+export function clearLeaguesCache(userId) {
+  leaguesCache = null;
+  leaguesCacheTs = 0;
+  try { localStorage.removeItem(`leagues_cache_${userId}`); } catch {}
+}
+
 export default function Leagues() {
-  const [leagues, setLeagues] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
   const user = getUser();
+  const cached = readCache(user.id);
+  const [leagues, setLeagues] = useState(cached || []);
+  const [loading, setLoading] = useState(!cached);
+  const navigate = useNavigate();
 
-  useEffect(() => { loadLeagues(); }, []);
-
-  async function loadLeagues() {
-    const { data } = await supabase
+  useEffect(() => {
+    // Always fetch — cache just controls whether we show a spinner while waiting
+    supabase
       .from('league_members')
       .select('league_id, leagues(*)')
-      .eq('user_id', user.id);
-    setLeagues((data || []).map(lm => lm.leagues));
-    setLoading(false);
-  }
+      .eq('user_id', user.id)
+      .then(({ data }) => {
+        if (!data) return;
+        const result = data.map(lm => lm.leagues);
+        writeCache(user.id, result);
+        setLeagues(result);
+        setLoading(false);
+      });
+  }, []);
 
   if (loading) return <LeaguesSkeleton />;
 

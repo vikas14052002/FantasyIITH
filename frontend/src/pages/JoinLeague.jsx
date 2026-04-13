@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { getUser } from '../lib/auth';
+import { clearLeaguesCache } from './Leagues';
 
 export default function JoinLeague() {
   const [searchParams] = useSearchParams();
@@ -47,6 +48,7 @@ export default function JoinLeague() {
     if (count >= league.max_members) { setError('League is full'); setLoading(false); return; }
 
     await supabase.from('league_members').insert({ league_id: league.id, user_id: user.id });
+    clearLeaguesCache(user.id);
     navigate(`/leagues/${league.id}`);
   };
 
