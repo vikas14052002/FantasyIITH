@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { getUser } from '../lib/auth';
 import { hasMatchStarted } from '../lib/matchLock';
+import PlayerBreakdown from '../components/PlayerBreakdown';
 import './TeamCompare.css';
 
 export default function TeamCompare() {
@@ -15,6 +16,8 @@ export default function TeamCompare() {
   const [comparison, setComparison] = useState(null);
   const [loading, setLoading] = useState(true);
   const [comparing, setComparing] = useState(false);
+  const [matchPlayersMap, setMatchPlayersMap] = useState(new Map());
+  const [selectedPlayer, setSelectedPlayer] = useState(null);
 
   useEffect(() => { loadData(); }, [leagueId]);
 
@@ -94,13 +97,20 @@ export default function TeamCompare() {
     });
 
     // Different players: only in one team (include C/VC if not shared)
-    const onlyT1 = t1Players.filter(p => !t2Map.has(p.player_id));
-    const onlyT2 = t2Players.filter(p => !t1Map.has(p.player_id));
+    const onlyT1 = t1Players.filter(p => !t2Map.has(p.player_id)).sort((a, b) => b.total_points - a.total_points);
+    const onlyT2 = t2Players.filter(p => !t1Map.has(p.player_id)).sort((a, b) => b.total_points - a.total_points);
 
     // Common players: in both teams but NOT in the C&VC shared section
     const common = t1Players
       .filter(p => t2Map.has(p.player_id) && !cvSharedIds.has(p.player_id))
       .map(p1 => ({ t1: p1, t2: t2Map.get(p1.player_id) }));
+
+    // Fetch full match_players stats for breakdown panel
+    const { data: mpData } = await supabase
+      .from('match_players')
+      .select('*')
+      .eq('match_id', selectedMatch);
+    setMatchPlayersMap(new Map((mpData || []).map(mp => [mp.player_id, mp])));
 
     setComparison({
       error: false,
@@ -154,11 +164,14 @@ export default function TeamCompare() {
         </div>
       )}
 
+      {selectedPlayer && <PlayerBreakdown player={selectedPlayer} onClose={() => setSelectedPlayer(null)} />}
+
       {comparison && !comparison.error && (() => {
         const c = comparison;
         const t1Total = c.team1.total_points || 0;
         const t2Total = c.team2.total_points || 0;
         const diff = t1Total - t2Total;
+        const handlePlayerClick = (p) => setSelectedPlayer({ ...matchPlayersMap.get(p.player_id), ...p, fantasy_points: p.base_points });
 
         return (
           <div className="cmp-result fade-in">
@@ -200,7 +213,7 @@ export default function TeamCompare() {
             {(c.onlyT1.length > 0 || c.onlyT2.length > 0) && (
               <div className="cmp-cat-body">
                 {Array.from({ length: Math.max(c.onlyT1.length, c.onlyT2.length) }).map((_, i) => (
-                  <DiffRow key={i} p1={c.onlyT1[i]} p2={c.onlyT2[i]} />
+                  <DiffRow key={i} p1={c.onlyT1[i]} p2={c.onlyT2[i]} onPlayerClick={handlePlayerClick} />
                 ))}
               </div>
             )}
@@ -217,7 +230,7 @@ export default function TeamCompare() {
                 <CVRow
                   p1={c.captain1} label1="C"
                   p2Right={c.t2Map.get(c.captain1.player_id)}
-                  isUser1Row
+                  isUser1Row onPlayerClick={handlePlayerClick}
                 />
               )}
               {/* User2's captain — if different from user1's and both have this player */}
@@ -225,6 +238,7 @@ export default function TeamCompare() {
                 <CVRow
                   p2={c.captain2} label2="C"
                   p1Left={c.t1Map.get(c.captain2.player_id)}
+                  onPlayerClick={handlePlayerClick}
                 />
               )}
               {/* User1's VC — if both users have this player */}
@@ -232,7 +246,7 @@ export default function TeamCompare() {
                 <CVRow
                   p1={c.vc1} label1="VC"
                   p2Right={c.t2Map.get(c.vc1.player_id)}
-                  isUser1Row
+                  isUser1Row onPlayerClick={handlePlayerClick}
                 />
               )}
               {/* User2's VC — if different from user1's and both have this player */}
@@ -240,6 +254,7 @@ export default function TeamCompare() {
                 <CVRow
                   p2={c.vc2} label2="VC"
                   p1Left={c.t1Map.get(c.vc2.player_id)}
+                  onPlayerClick={handlePlayerClick}
                 />
               )}
             </div>
@@ -256,9 +271,9 @@ export default function TeamCompare() {
                   {c.common.map(({ t1, t2 }) => (
                     <div key={t1.player_id} className="cmp-common-row">
                       <span className="cmp-pts">{t1.total_points}</span>
-                      <div className="cmp-diff-side left"><PlayerChip p={t1} label={getLabel(t1)} /></div>
+                      <div className="cmp-diff-side left"><PlayerChip p={t1} label={getLabel(t1)} onClick={() => handlePlayerClick(t1)} /></div>
                       <div className="cmp-diff-vs"></div>
-                      <div className="cmp-diff-side right"><PlayerChip p={t2} label={getLabel(t2)} /></div>
+                      <div className="cmp-diff-side right"><PlayerChip p={t2} label={getLabel(t2)} onClick={() => handlePlayerClick(t2)} /></div>
                       <span className="cmp-pts">{t2.total_points}</span>
                     </div>
                   ))}
@@ -293,15 +308,15 @@ function CategoryHeader({ title, badge, badgeClass, count, pts1, pts2 }) {
   );
 }
 
-function CVRow({ p1, label1, p2, label2, p2Right, p1Left, isUser1Row }) {
+function CVRow({ p1, label1, p2, label2, p2Right, p1Left, isUser1Row, onPlayerClick }) {
   if (isUser1Row && p1) {
     return (
       <div className="cmp-cv-row">
         <span className="cmp-cv-pts">{p1.total_points}</span>
-        <div className="cmp-cv-side left"><PlayerChip p={p1} label={label1} /></div>
+        <div className="cmp-cv-side left"><PlayerChip p={p1} label={label1} onClick={() => onPlayerClick?.(p1)} /></div>
         <div className="cmp-cv-vs">vs</div>
         <div className="cmp-cv-side right">
-          {p2Right ? <PlayerChip p={p2Right} label={p2Right.is_captain ? 'C' : p2Right.is_vice_captain ? 'VC' : null} /> : <span className="cmp-cv-empty">—</span>}
+          {p2Right ? <PlayerChip p={p2Right} label={p2Right.is_captain ? 'C' : p2Right.is_vice_captain ? 'VC' : null} onClick={() => onPlayerClick?.(p2Right)} /> : <span className="cmp-cv-empty">—</span>}
         </div>
         <span className="cmp-cv-pts">{p2Right ? p2Right.total_points : ''}</span>
       </div>
@@ -313,10 +328,10 @@ function CVRow({ p1, label1, p2, label2, p2Right, p1Left, isUser1Row }) {
       <div className="cmp-cv-row">
         <span className="cmp-cv-pts">{p1Left ? p1Left.total_points : ''}</span>
         <div className="cmp-cv-side left">
-          {p1Left ? <PlayerChip p={p1Left} label={p1Left.is_captain ? 'C' : p1Left.is_vice_captain ? 'VC' : null} /> : <span className="cmp-cv-empty">—</span>}
+          {p1Left ? <PlayerChip p={p1Left} label={p1Left.is_captain ? 'C' : p1Left.is_vice_captain ? 'VC' : null} onClick={() => onPlayerClick?.(p1Left)} /> : <span className="cmp-cv-empty">—</span>}
         </div>
         <div className="cmp-cv-vs">vs</div>
-        <div className="cmp-cv-side right"><PlayerChip p={p2} label={label2} /></div>
+        <div className="cmp-cv-side right"><PlayerChip p={p2} label={label2} onClick={() => onPlayerClick?.(p2)} /></div>
         <span className="cmp-cv-pts">{p2.total_points}</span>
       </div>
     );
@@ -332,26 +347,26 @@ function getLabel(p) {
   return null;
 }
 
-function DiffRow({ p1, p2 }) {
+function DiffRow({ p1, p2, onPlayerClick }) {
   return (
     <div className="cmp-diff-row">
       <span className="cmp-diff-pts">{p1 ? p1.total_points : ''}</span>
       <div className="cmp-diff-side left">
-        {p1 ? <PlayerChip p={p1} label={getLabel(p1)} /> : null}
+        {p1 ? <PlayerChip p={p1} label={getLabel(p1)} onClick={() => onPlayerClick?.(p1)} /> : null}
       </div>
       <div className="cmp-diff-vs">vs</div>
       <div className="cmp-diff-side right">
-        {p2 ? <PlayerChip p={p2} label={getLabel(p2)} /> : null}
+        {p2 ? <PlayerChip p={p2} label={getLabel(p2)} onClick={() => onPlayerClick?.(p2)} /> : null}
       </div>
       <span className="cmp-diff-pts">{p2 ? p2.total_points : ''}</span>
     </div>
   );
 }
 
-function PlayerChip({ p, label }) {
+function PlayerChip({ p, label, onClick }) {
   if (!p) return null;
   return (
-    <div className="cmp-chip">
+    <div className="cmp-chip" onClick={onClick} style={{ cursor: onClick ? 'pointer' : 'default' }}>
       {p.image_url ? (
         <img className="cmp-chip-img" src={p.image_url} alt={p.name} />
       ) : (
@@ -359,10 +374,10 @@ function PlayerChip({ p, label }) {
       )}
       <div className="cmp-chip-info">
         <div className="cmp-chip-name">
-          {p.name.split(' ').pop()}
+          <span className="cmp-chip-name-text">{p.name}</span>
           {label && <span className={`cmp-chip-label ${label === 'C' ? 'cmp-badge-c' : label === 'VC' ? 'cmp-badge-vc' : ''}`}>{label}</span>}
         </div>
-        <div className="cmp-chip-role">{p.role}</div>
+        <div className="cmp-chip-role">{p.team && <span className="cmp-chip-team">{p.team} · </span>}{p.role}</div>
       </div>
     </div>
   );

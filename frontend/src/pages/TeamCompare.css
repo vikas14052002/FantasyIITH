@@ -22,8 +22,8 @@
 .cmp-score-strip {
   display: flex;
   align-items: center;
-  padding: 16px 12px;
-  margin-bottom: 16px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
 }
 
 .cmp-score-side {
@@ -61,10 +61,10 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 14px;
+  padding: 7px 10px;
   background: var(--bg-elevated);
   border-radius: 8px 8px 0 0;
-  margin-top: 12px;
+  margin-top: 8px;
 }
 
 .cmp-cat-title {
@@ -122,11 +122,12 @@
 .cmp-cv-row,
 .cmp-common-row {
   display: grid;
-  grid-template-columns: 30px 1fr 16px 1fr 30px;
+  grid-template-columns: 32px 1fr 14px 1fr 32px;
   align-items: center;
-  padding: 7px 10px;
+  padding: 6px 8px;
   border-bottom: 1px solid var(--border);
   gap: 0;
+  overflow: hidden;
 }
 
 .cmp-diff-row:last-child,
@@ -158,6 +159,7 @@
   display: flex;
   align-items: center;
   min-width: 0;
+  overflow: hidden;
 }
 
 .cmp-diff-side.left,
@@ -168,12 +170,13 @@
 .cmp-diff-side.left .cmp-chip,
 .cmp-cv-side.left .cmp-chip {
   flex-direction: row-reverse;
+  width: 100%;
 }
 
 .cmp-diff-side.left .cmp-chip-info,
 .cmp-cv-side.left .cmp-chip-info {
-  text-align: right;
-  align-items: flex-end;
+  flex: 1;
+  min-width: 0;
 }
 
 .cmp-diff-side.right,
@@ -281,6 +284,7 @@
   align-items: center;
   gap: 3px;
   min-width: 0;
+  overflow: hidden;
 }
 
 .cmp-chip-name-text {
@@ -288,11 +292,17 @@
   overflow: hidden;
   text-overflow: ellipsis;
   min-width: 0;
+  flex: 1;
 }
 
 .cmp-chip-role {
   font-size: 8px;
   color: var(--text-muted);
+}
+
+.cmp-chip-team {
+  color: var(--accent);
+  font-weight: 600;
 }
 
 .cmp-chip-label {

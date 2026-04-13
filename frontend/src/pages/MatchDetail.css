@@ -152,7 +152,7 @@
 .md-cmp-overlay-body {
   flex: 1;
   overflow-y: auto;
-  padding: 16px;
+  padding: 10px 12px;
   -webkit-overflow-scrolling: touch;
 }
 

@@ -284,14 +284,14 @@ export default function MatchDetail() {
     setComparison({
       error: false, user1: leagueMembers.find(m => m.id === user.id), user2: leagueMembers.find(m => m.id === otherId),
       team1: t1, team2: t2, t1Map, t2Map, captain1, captain2, vc1, vc2, cvSharedIds,
-      onlyT1: t1Players.filter(p => !t2Map.has(p.player_id)),
-      onlyT2: t2Players.filter(p => !t1Map.has(p.player_id)),
+      onlyT1: t1Players.filter(p => !t2Map.has(p.player_id)).sort((a, b) => b.total_points - a.total_points),
+      onlyT2: t2Players.filter(p => !t1Map.has(p.player_id)).sort((a, b) => b.total_points - a.total_points),
       common: t1Players.filter(p => t2Map.has(p.player_id) && !cvSharedIds.has(p.player_id)).map(p1 => ({ t1: p1, t2: t2Map.get(p1.player_id) })),
     });
     setComparing(false);
   }
 
-  function enrich(tp) { const base = tp.fantasy_points || 0; const mult = tp.is_captain ? 2 : tp.is_vice_captain ? 1.5 : 1; return { ...tp, total_points: base * mult }; }
+  function enrich(tp) { const base = tp.fantasy_points || 0; const mult = tp.is_captain ? 2 : tp.is_vice_captain ? 1.5 : 1; return { ...tp, base_points: base, total_points: base * mult }; }
   function getLabel(p) { if (!p) return null; return p.is_captain ? 'C' : p.is_vice_captain ? 'VC' : null; }
 
   if (loading) return <MatchDetailSkeleton />;
@@ -394,6 +394,7 @@ export default function MatchDetail() {
                 const t1Total = c.team1.total_points || 0;
                 const t2Total = c.team2.total_points || 0;
                 const diff = t1Total - t2Total;
+                const handleCmpClick = (p) => setSelectedPlayer({ ...players.find(mp => mp.player_id === p.player_id), ...p, fantasy_points: p.base_points });
                 return (
                   <div className="md-cmp-overlay fade-in">
                     <div className="md-cmp-overlay-header">
@@ -440,9 +441,9 @@ export default function MatchDetail() {
                             {Array.from({ length: Math.max(c.onlyT1.length, c.onlyT2.length) }).map((_, i) => (
                               <div key={i} className="cmp-diff-row">
                                 <span className="cmp-diff-pts">{c.onlyT1[i] ? c.onlyT1[i].total_points : ''}</span>
-                                <div className="cmp-diff-side left">{c.onlyT1[i] && <CmpChip p={c.onlyT1[i]} label={getLabel(c.onlyT1[i])} />}</div>
+                                <div className="cmp-diff-side left">{c.onlyT1[i] && <CmpChip p={c.onlyT1[i]} label={getLabel(c.onlyT1[i])} onClick={() => handleCmpClick(c.onlyT1[i])} />}</div>
                                 <div className="cmp-diff-vs">vs</div>
-                                <div className="cmp-diff-side right">{c.onlyT2[i] && <CmpChip p={c.onlyT2[i]} label={getLabel(c.onlyT2[i])} />}</div>
+                                <div className="cmp-diff-side right">{c.onlyT2[i] && <CmpChip p={c.onlyT2[i]} label={getLabel(c.onlyT2[i])} onClick={() => handleCmpClick(c.onlyT2[i])} />}</div>
                                 <span className="cmp-diff-pts">{c.onlyT2[i] ? c.onlyT2[i].total_points : ''}</span>
                               </div>
                             ))}
@@ -462,9 +463,9 @@ export default function MatchDetail() {
                               return (
                                 <div key={id} className="cmp-diff-row">
                                   <span className="cmp-diff-pts">{left.total_points}</span>
-                                  <div className="cmp-diff-side left"><CmpChip p={left} label={getLabel(left)} /></div>
+                                  <div className="cmp-diff-side left"><CmpChip p={left} label={getLabel(left)} onClick={() => handleCmpClick(left)} /></div>
                                   <div className="cmp-diff-vs">vs</div>
-                                  <div className="cmp-diff-side right"><CmpChip p={right} label={getLabel(right)} /></div>
+                                  <div className="cmp-diff-side right"><CmpChip p={right} label={getLabel(right)} onClick={() => handleCmpClick(right)} /></div>
                                   <span className="cmp-diff-pts">{right.total_points}</span>
                                 </div>
                               );
@@ -482,9 +483,9 @@ export default function MatchDetail() {
                             {c.common.map(({ t1, t2 }) => (
                               <div key={t1.player_id} className="cmp-common-row">
                                 <span className="cmp-pts">{t1.total_points}</span>
-                                <div className="cmp-diff-side left"><CmpChip p={t1} label={getLabel(t1)} /></div>
+                                <div className="cmp-diff-side left"><CmpChip p={t1} label={getLabel(t1)} onClick={() => handleCmpClick(t1)} /></div>
                                 <div className="cmp-diff-vs"></div>
-                                <div className="cmp-diff-side right"><CmpChip p={t2} label={getLabel(t2)} /></div>
+                                <div className="cmp-diff-side right"><CmpChip p={t2} label={getLabel(t2)} onClick={() => handleCmpClick(t2)} /></div>
                                 <span className="cmp-pts">{t2.total_points}</span>
                               </div>
                             ))}
@@ -611,4 +612,4 @@ function ScorecardSection({ batsmen, bowlers, score, teamName, onPlayerClick }) 
 }
 
 function CatHeader({ title, pts1, pts2 }) { const d=pts1-pts2; return <div className="cmp-cat-header"><div className="cmp-cat-title"><span>{title}</span></div><div className="cmp-cat-summary"><span className="cmp-cat-pts">{pts1}</span><span className={`cmp-cat-diff ${d>0?'pos':d<0?'neg':''}`}>{d>0?'+':''}{d}</span><span className="cmp-cat-pts">{pts2}</span></div></div>; }
-function CmpChip({ p, label }) { if(!p)return null; return <div className="cmp-chip">{p.image_url?<img className="cmp-chip-img" src={p.image_url} alt={p.name}/>:<div className="cmp-chip-fb">{p.name.split(' ').map(n=>n[0]).join('').slice(0,2)}</div>}<div className="cmp-chip-info"><div className="cmp-chip-name">{label&&<span className={`cmp-chip-label ${label==='C'?'cmp-badge-c':'cmp-badge-vc'}`}>{label}</span>}<span className="cmp-chip-name-text">{p.name.split(' ').pop()}</span></div><div className="cmp-chip-role">{p.role}</div></div></div>; }
+function CmpChip({ p, label, onClick }) { if(!p)return null; return <div className="cmp-chip" onClick={onClick} style={{cursor:onClick?'pointer':'default'}}>{p.image_url?<img className="cmp-chip-img" src={p.image_url} alt={p.name}/>:<div className="cmp-chip-fb">{p.name.split(' ').map(n=>n[0]).join('').slice(0,2)}</div>}<div className="cmp-chip-info"><div className="cmp-chip-name"><span className="cmp-chip-name-text">{p.name}</span>{label&&<span className={`cmp-chip-label ${label==='C'?'cmp-badge-c':'cmp-badge-vc'}`}>{label}</span>}</div><div className="cmp-chip-role">{p.team&&<span className="cmp-chip-team">{p.team} · </span>}{p.role}</div></div></div>; }

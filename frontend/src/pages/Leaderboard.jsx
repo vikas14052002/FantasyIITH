@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { getUser } from '../lib/auth';
 import { hasMatchStarted } from '../lib/matchLock';
+import PlayerBreakdown from '../components/PlayerBreakdown';
 import './Leaderboard.css';
 import './TeamCompare.css';
 
@@ -27,6 +28,8 @@ export default function Leaderboard() {
   const [comparison, setComparison] = useState(null);
   const [comparing, setComparing] = useState(false);
   const [activeCompareUser, setActiveCompareUser] = useState(null);
+  const [matchPlayersMap, setMatchPlayersMap] = useState(new Map());
+  const [selectedPlayer, setSelectedPlayer] = useState(null);
 
   useEffect(() => { loadLeagues(); }, []);
   useEffect(() => { if (selectedLeague) loadData(); }, [selectedLeague]);
@@ -167,13 +170,20 @@ export default function Leaderboard() {
       const sameRole = p1.is_captain === p2.is_captain && p1.is_vice_captain === p2.is_vice_captain;
       if (!sameRole) cvSharedIds.add(p1.player_id);
     });
-    const onlyT1 = t1Players.filter(p => !t2Map.has(p.player_id));
-    const onlyT2 = t2Players.filter(p => !t1Map.has(p.player_id));
+    const onlyT1 = t1Players.filter(p => !t2Map.has(p.player_id)).sort((a, b) => b.total_points - a.total_points);
+    const onlyT2 = t2Players.filter(p => !t1Map.has(p.player_id)).sort((a, b) => b.total_points - a.total_points);
     const common = t1Players
       .filter(p => t2Map.has(p.player_id) && !cvSharedIds.has(p.player_id))
       .map(p1 => ({ t1: p1, t2: t2Map.get(p1.player_id) }));
     const otherUser = members.find(m => m.id === otherUserId);
     const myScoreEntry = scores.find(s => s.user_id === user.id);
+    // Fetch full match_players stats for breakdown panel
+    const { data: mpData } = await supabase
+      .from('match_players')
+      .select('*')
+      .eq('match_id', compareMatch);
+    setMatchPlayersMap(new Map((mpData || []).map(mp => [mp.player_id, mp])));
+
     setComparison({
       error: false,
       user1: myScoreEntry?.users || { name: 'You', avatar_color: 'var(--bg-elevated)' },
@@ -238,6 +248,8 @@ export default function Leaderboard() {
         </button>
       </div>
 
+      {selectedPlayer && <PlayerBreakdown player={selectedPlayer} onClose={() => setSelectedPlayer(null)} />}
+
       {compareMode ? (
         /* ── Compare Mode ── */
         <div className="lb-compare-panel fade-in">
@@ -293,6 +305,7 @@ export default function Leaderboard() {
                 const t1Total = c.team1.total_points || 0;
                 const t2Total = c.team2.total_points || 0;
                 const diff = t1Total - t2Total;
+                const handlePlayerClick = (p) => setSelectedPlayer({ ...matchPlayersMap.get(p.player_id), ...p, fantasy_points: p.base_points });
                 return (
                   <div className="cmp-result fade-in" style={{ marginTop: 16 }}>
                     {/* Score strip */}
@@ -331,7 +344,7 @@ export default function Leaderboard() {
                           pts2={c.onlyT2.reduce((s, p) => s + p.total_points, 0)} />
                         <div className="cmp-cat-body">
                           {Array.from({ length: Math.max(c.onlyT1.length, c.onlyT2.length) }).map((_, i) => (
-                            <LbDiffRow key={i} p1={c.onlyT1[i]} p2={c.onlyT2[i]} />
+                            <LbDiffRow key={i} p1={c.onlyT1[i]} p2={c.onlyT2[i]} onPlayerClick={handlePlayerClick} />
                           ))}
                         </div>
                       </>
@@ -350,9 +363,9 @@ export default function Leaderboard() {
                             return (
                               <div key={id} className="cmp-diff-row">
                                 <span className="cmp-diff-pts">{left.total_points}</span>
-                                <div className="cmp-diff-side left"><LbPlayerChip p={left} label={getLabelFn(left)} /></div>
+                                <div className="cmp-diff-side left"><LbPlayerChip p={left} label={getLabelFn(left)} onClick={() => handlePlayerClick(left)} /></div>
                                 <div className="cmp-diff-vs">vs</div>
-                                <div className="cmp-diff-side right"><LbPlayerChip p={right} label={getLabelFn(right)} /></div>
+                                <div className="cmp-diff-side right"><LbPlayerChip p={right} label={getLabelFn(right)} onClick={() => handlePlayerClick(right)} /></div>
                                 <span className="cmp-diff-pts">{right.total_points}</span>
                               </div>
                             );
@@ -371,9 +384,9 @@ export default function Leaderboard() {
                           {c.common.map(({ t1, t2 }) => (
                             <div key={t1.player_id} className="cmp-common-row">
                               <span className="cmp-pts">{t1.total_points}</span>
-                              <div className="cmp-diff-side left"><LbPlayerChip p={t1} label={getLabelFn(t1)} /></div>
+                              <div className="cmp-diff-side left"><LbPlayerChip p={t1} label={getLabelFn(t1)} onClick={() => handlePlayerClick(t1)} /></div>
                               <div className="cmp-diff-vs"></div>
-                              <div className="cmp-diff-side right"><LbPlayerChip p={t2} label={getLabelFn(t2)} /></div>
+                              <div className="cmp-diff-side right"><LbPlayerChip p={t2} label={getLabelFn(t2)} onClick={() => handlePlayerClick(t2)} /></div>
                               <span className="cmp-pts">{t2.total_points}</span>
                             </div>
                           ))}
@@ -535,26 +548,26 @@ function LbCVRow({ p1, label1, p2, label2, p2Right, p1Left, isUser1Row }) {
   return null;
 }
 
-function LbDiffRow({ p1, p2 }) {
+function LbDiffRow({ p1, p2, onPlayerClick }) {
   return (
     <div className="cmp-diff-row">
       <span className="cmp-diff-pts">{p1 ? p1.total_points : ''}</span>
       <div className="cmp-diff-side left">
-        {p1 ? <LbPlayerChip p={p1} label={getLabelFn(p1)} /> : null}
+        {p1 ? <LbPlayerChip p={p1} label={getLabelFn(p1)} onClick={() => onPlayerClick?.(p1)} /> : null}
       </div>
       <div className="cmp-diff-vs">vs</div>
       <div className="cmp-diff-side right">
-        {p2 ? <LbPlayerChip p={p2} label={getLabelFn(p2)} /> : null}
+        {p2 ? <LbPlayerChip p={p2} label={getLabelFn(p2)} onClick={() => onPlayerClick?.(p2)} /> : null}
       </div>
       <span className="cmp-diff-pts">{p2 ? p2.total_points : ''}</span>
     </div>
   );
 }
 
-function LbPlayerChip({ p, label }) {
+function LbPlayerChip({ p, label, onClick }) {
   if (!p) return null;
   return (
-    <div className="cmp-chip">
+    <div className="cmp-chip" onClick={onClick} style={{ cursor: onClick ? 'pointer' : 'default' }}>
       {p.image_url ? (
         <img className="cmp-chip-img" src={p.image_url} alt={p.name} />
       ) : (
@@ -562,10 +575,10 @@ function LbPlayerChip({ p, label }) {
       )}
       <div className="cmp-chip-info">
         <div className="cmp-chip-name">
-          {p.name.split(' ').pop()}
+          <span className="cmp-chip-name-text">{p.name}</span>
           {label && <span className={`cmp-chip-label ${label === 'C' ? 'cmp-badge-c' : label === 'VC' ? 'cmp-badge-vc' : ''}`}>{label}</span>}
         </div>
-        <div className="cmp-chip-role">{p.role}</div>
+        <div className="cmp-chip-role">{p.team && <span className="cmp-chip-team">{p.team} · </span>}{p.role}</div>
       </div>
     </div>
   );
