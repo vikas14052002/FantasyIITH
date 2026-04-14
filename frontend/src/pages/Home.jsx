@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { getUser } from '../lib/auth';
 import MatchCard from '../components/MatchCard';
+import AdBanner from '../components/AdBanner';
 import './Home.css';
 
 export default function Home() {
@@ -10,19 +11,37 @@ export default function Home() {
   const [leagues, setLeagues] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('live');
+  const [liveStats, setLiveStats] = useState({ online: 0, totalUsers: 0, totalTeams: 0 });
   const navigate = useNavigate();
   const user = getUser();
 
   useEffect(() => { loadData(); }, []);
 
-  // Auto-refresh every 30s to catch status changes (upcoming → live → completed)
+  // Auto-refresh every 30s
   useEffect(() => {
     const interval = setInterval(() => {
       supabase.from('matches').select('*').order('match_number', { ascending: false })
         .then(({ data }) => { if (data) setMatches(data); });
+      loadStats();
     }, 30000);
     return () => clearInterval(interval);
   }, []);
+
+  async function loadStats() {
+    const twoMinsAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+    const [onlineRes, usersRes, teamsRes] = await Promise.all([
+      supabase.from('sessions').select('user_name', { count: 'exact' }).gt('created_at', twoMinsAgo),
+      supabase.from('users').select('id', { count: 'exact' }),
+      supabase.from('teams').select('id', { count: 'exact' }),
+    ]);
+    // Count distinct online users
+    const onlineNames = new Set((onlineRes.data || []).map(s => s.user_name));
+    setLiveStats({
+      online: onlineNames.size,
+      totalUsers: usersRes.count || 0,
+      totalTeams: teamsRes.count || 0,
+    });
+  }
 
   async function loadData() {
     const [matchRes, leagueRes] = await Promise.all([
@@ -32,6 +51,7 @@ export default function Home() {
     const matchData = matchRes.data || [];
     setMatches(matchData);
     setLeagues((leagueRes.data || []).map(lm => lm.leagues));
+    loadStats();
     // Auto-select most relevant tab: live > upcoming > completed
     if (matchData.some(m => m.status === 'live')) setActiveTab('live');
     else if (matchData.some(m => m.status === 'upcoming')) setActiveTab('upcoming');
@@ -62,6 +82,32 @@ export default function Home() {
 
   return (
     <div className="page fade-in">
+      {/* Live Stats Bar */}
+      <div className="home-stats-bar">
+        <div className="home-stat">
+          <span className="home-stat-value">
+            <span className="home-stat-dot online" />
+            {liveStats.online}
+          </span>
+          <span className="home-stat-label">Online</span>
+        </div>
+        <div className="home-stat-divider" />
+        <div className="home-stat">
+          <span className="home-stat-value">{liveStats.totalUsers}</span>
+          <span className="home-stat-label">Players</span>
+        </div>
+        <div className="home-stat-divider" />
+        <div className="home-stat">
+          <span className="home-stat-value">{liveStats.totalTeams}</span>
+          <span className="home-stat-label">Teams</span>
+        </div>
+        <div className="home-stat-divider" />
+        <div className="home-stat">
+          <span className="home-stat-value">{matches.length}</span>
+          <span className="home-stat-label">Matches</span>
+        </div>
+      </div>
+
       <div className="home-section">
         <div className="section-header">
           <h2 className="section-title">Matches</h2>
@@ -81,7 +127,10 @@ export default function Home() {
             <p className="empty-text">No {activeTab} matches</p>
           </div>
         ) : (
-          filtered.map(m => <MatchCard key={m.id} match={m} leagueId={firstLeague?.id} hasTeam={null} />)
+          <>
+            {filtered.map(m => <MatchCard key={m.id} match={m} leagueId={firstLeague?.id} hasTeam={null} />)}
+            <AdBanner />
+          </>
         )}
       </div>
 

@@ -1,3 +1,54 @@
+/* Live Stats Bar */
+.home-stats-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 12px 8px;
+  margin-bottom: 16px;
+  background: var(--bg-surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+}
+
+.home-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.home-stat-value {
+  font-size: 18px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.home-stat-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.home-stat-dot.online {
+  background: var(--green);
+  box-shadow: 0 0 6px var(--green);
+  animation: pulse 1.5s infinite;
+}
+
+.home-stat-label {
+  font-size: 10px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.home-stat-divider {
+  width: 1px;
+  height: 28px;
+  background: var(--border);
+}
+
 .home-section {
   margin-bottom: 24px;
 }

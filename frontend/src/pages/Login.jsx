@@ -171,10 +171,6 @@ export default function Login() {
           <p className="login-subtitle">Fantasy Cricket League</p>
         </div>
 
-        <div className="login-migration-notice">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
-          <span>We've upgraded to phone login for better security. Old account? Use "I Have an Existing Account" after OTP verification to link your data.</span>
-        </div>
 
         {step === 'phone' && (
           <form onSubmit={handleSendOTP} className="login-form">
