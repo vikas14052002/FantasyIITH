@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { getUser } from '../lib/auth';
@@ -11,6 +11,38 @@ export default function JoinLeague() {
   const [error, setError] = useState('');
   const navigate = useNavigate();
   const user = getUser();
+
+  // If code is pre-filled from URL, check membership immediately
+  useEffect(() => {
+    const urlCode = searchParams.get('code');
+    if (!urlCode || !user) return;
+
+    async function checkAlreadyJoined() {
+      setLoading(true);
+      const { data: league } = await supabase
+        .from('leagues')
+        .select('id')
+        .eq('invite_code', urlCode.trim().toUpperCase())
+        .single();
+
+      if (!league) { setLoading(false); return; }
+
+      const { data: existing } = await supabase
+        .from('league_members')
+        .select('id')
+        .eq('league_id', league.id)
+        .eq('user_id', user.id)
+        .single();
+
+      if (existing) {
+        navigate(`/leagues/${league.id}`, { replace: true });
+      } else {
+        setLoading(false);
+      }
+    }
+
+    checkAlreadyJoined();
+  }, []);
 
   const handleJoin = async (e) => {
     e.preventDefault();
