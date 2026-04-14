@@ -278,3 +278,34 @@ body {
 .empty { text-align: center; padding: 40px 16px; color: var(--text-secondary); }
 .empty-icon { font-size: 48px; margin-bottom: 12px; }
 .empty-text { font-size: 14px; }
+
+/* App Footer */
+.app-footer {
+  text-align: center;
+  padding: 20px 16px 8px;
+  margin-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.app-footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.app-footer-links a {
+  font-size: 11px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.app-footer-links a:active { color: var(--red-primary); }
+.app-footer-links span { font-size: 11px; color: var(--text-muted); }
+
+.app-footer-copy {
+  font-size: 9px;
+  color: var(--text-muted);
+  margin: 0;
+}

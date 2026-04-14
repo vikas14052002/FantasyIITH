@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { getUser } from '../lib/auth';
 import { LeaguesSkeleton } from '../components/Skeleton';
 import AdBanner from '../components/AdBanner';
+import AppFooter from '../components/AppFooter';
 
 const TTL_MS = 30 * 60 * 1000; // 30 minutes
 let leaguesCache = null;
@@ -93,6 +94,7 @@ export default function Leagues() {
         ))
       )}
       <AdBanner />
+      <AppFooter />
     </div>
   );
 }
