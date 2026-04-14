@@ -29,6 +29,11 @@ const Admin = lazy(() => import('./pages/Admin'));
 const PointsSystem = lazy(() => import('./pages/PointsSystem'));
 const Feedback = lazy(() => import('./pages/Feedback'));
 const UserBreakdown = lazy(() => import('./pages/UserBreakdown'));
+const Landing = lazy(() => import('./pages/Landing'));
+const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
+const TermsOfService = lazy(() => import('./pages/TermsOfService'));
+const About = lazy(() => import('./pages/About'));
+const FantasyGuide = lazy(() => import('./pages/FantasyGuide'));
 
 function ProtectedRoute({ children }) {
   const user = getUser();
@@ -80,10 +85,16 @@ export default function App() {
           <Route path="/team-preview/:teamId" element={<ProtectedRoute><TeamPreview /></ProtectedRoute>} />
           <Route path="/match/:id" element={<ProtectedRoute><AppShell><MatchDetail /></AppShell></ProtectedRoute>} />
           <Route path="/admin" element={<AdminRoute><AppShell><Admin /></AppShell></AdminRoute>} />
-          <Route path="/points" element={<ProtectedRoute><PointsSystem /></ProtectedRoute>} />
+          <Route path="/points" element={<PointsSystem />} />
           <Route path="/feedback" element={<ProtectedRoute><AppShell><Feedback /></AppShell></ProtectedRoute>} />
           <Route path="/leagues/:leagueId/breakdown/:userId" element={<ProtectedRoute><UserBreakdown /></ProtectedRoute>} />
-          <Route path="*" element={<Navigate to="/leagues" replace />} />
+          {/* Public pages (no login required - for SEO & AdSense) */}
+          <Route path="/" element={<Landing />} />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/terms" element={<TermsOfService />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/guide" element={<FantasyGuide />} />
+          <Route path="*" element={<Landing />} />
         </Routes>
       </Suspense>
       </ErrorBoundary>
