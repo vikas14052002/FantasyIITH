@@ -106,8 +106,25 @@
     #145A1E 100%
   );
   overflow: hidden;
-  min-height: 500px;
-  padding: 16px 0;
+  min-height: 420px;
+  padding: 10px 0;
+}
+
+/* PlayXI watermark */
+.field-watermark {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-25deg);
+  font-size: 56px;
+  font-weight: 900;
+  color: transparent;
+  -webkit-text-stroke: 1.5px rgba(255, 255, 255, 0.22);
+  letter-spacing: 6px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 1;
+  user-select: none;
 }
 
 /* Striped grass pattern */
@@ -193,8 +210,8 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  min-height: 480px;
-  padding: 8px 0;
+  min-height: 400px;
+  padding: 4px 0;
 }
 
 /* Role row */
@@ -202,8 +219,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  margin-bottom: 12px;
+  gap: 4px;
+  margin-bottom: 6px;
 }
 
 .preview-role-tag {
@@ -218,7 +235,7 @@
 .preview-players-row {
   display: flex;
   justify-content: center;
-  gap: 10px 14px;
+  gap: 6px 10px;
   flex-wrap: wrap;
   max-width: 310px;
   margin: 0 auto;
@@ -229,35 +246,35 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
-  width: 64px;
+  gap: 2px;
+  width: 54px;
 }
 
 /* Player avatar wrapper */
 .preview-avatar-wrap {
   position: relative;
-  width: 42px;
-  height: 42px;
+  width: 36px;
+  height: 36px;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
 }
 
 .preview-avatar-img {
-  width: 42px;
-  height: 42px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   object-fit: cover;
-  border: 2.5px solid #fff;
+  border: 2px solid #fff;
   background: var(--bg-elevated);
 }
 
 .preview-avatar-fallback {
-  width: 42px;
-  height: 42px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 700;
   border: none;
   background: rgba(255, 255, 255, 0.1);
