@@ -330,11 +330,13 @@ export default function CreateTeam() {
               {existingCaptainId === player.player_id && <span className="ct-lu-cv-badge ct-lu-c-badge">C</span>}
               {existingVcId === player.player_id && <span className="ct-lu-cv-badge ct-lu-vc-badge">VC</span>}
             </div>
-            <span className="ct-lu-role">{player.role}</span>
+            <span className="ct-lu-role">
+              {player.role}
+              {selectionPct[player.player_id] !== undefined && (
+                <span style={{ textTransform: 'none' }}> · Sel by <span style={{ color: selectionPct[player.player_id] > 80 ? '#16a34a' : selectionPct[player.player_id] > 60 ? '#F57C00' : selectionPct[player.player_id] > 40 ? '#e65100' : '#e53935' }}>{selectionPct[player.player_id]}%</span></span>
+              )}
+            </span>
           </div>
-          {selectionPct[player.player_id] !== undefined && (
-            <span className="ct-lu-sel">{selectionPct[player.player_id]}%</span>
-          )}
           <div className={`ct-select-btn ${isSelected ? 'active' : ''}`}
             style={{ width: 24, height: 24, minWidth: 24 }}>
             {isSelected ? (

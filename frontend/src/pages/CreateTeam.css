@@ -989,14 +989,6 @@
 .ct-lu-c-badge { background: var(--gold); color: #000; }
 .ct-lu-vc-badge { background: var(--bg-elevated); color: var(--text-secondary); border: 1px solid var(--border); }
 
-.ct-lu-sel {
-  font-size: 9px;
-  font-weight: 600;
-  color: var(--text-muted);
-  width: 30px;
-  flex-shrink: 0;
-  text-align: center;
-}
 
 .ct-lu-section-label {
   font-size: 8px;
