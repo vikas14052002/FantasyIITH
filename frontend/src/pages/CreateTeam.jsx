@@ -47,7 +47,14 @@ export default function CreateTeam() {
   const [sortDir, setSortDir] = useState('desc');
   const [showPreview, setShowPreview] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
-  const [paymentLoading, setPaymentLoading] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState('none'); // 'none' | 'pending' | 'rejected'
+  const [adminNote, setAdminNote] = useState('');
+  const [utrInput, setUtrInput] = useState('');
+  const [submitLoading, setSubmitLoading] = useState(false);
+  const [submitMsg, setSubmitMsg] = useState('');
+  const [upiCopied, setUpiCopied] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [flashId, setFlashId] = useState(null);
   const [flashType, setFlashType] = useState(null);
   const [selectionPct, setSelectionPct] = useState({});
@@ -121,6 +128,22 @@ export default function CreateTeam() {
             .eq('id', user.id)
             .single();
           if (!userData?.has_paid) {
+            // Check for an existing payment request
+            const { data: reqData } = await supabase
+              .from('payment_requests')
+              .select('status, admin_note')
+              .eq('user_id', user.id)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            if (reqData?.status === 'pending') {
+              setPaymentStatus('pending');
+            } else if (reqData?.status === 'rejected') {
+              setPaymentStatus('rejected');
+              setAdminNote(reqData.admin_note || '');
+            } else {
+              setPaymentStatus('none');
+            }
             setShowPayment(true);
             setLoading(false);
             return;
@@ -132,71 +155,30 @@ export default function CreateTeam() {
     setLoading(false);
   }
 
-  function loadRazorpayScript() {
-    return new Promise((resolve) => {
-      if (document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]')) {
-        resolve(true);
-        return;
-      }
-      const script = document.createElement('script');
-      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-      script.onload = () => resolve(true);
-      script.onerror = () => resolve(false);
-      document.body.appendChild(script);
-    });
-  }
-
-  async function handlePayment() {
-    setPaymentLoading(true);
-    try {
-      const { data: orderData, error: orderErr } = await supabase.functions.invoke('payment-handler', {
-        body: { action: 'create-order' },
-      });
-      if (orderErr || !orderData?.order_id) {
-        const detail = orderErr?.message || orderData?.error || JSON.stringify(orderData);
-        throw new Error(`Could not initiate payment: ${detail}`);
-      }
-
-      const loaded = await loadRazorpayScript();
-      if (!loaded) throw new Error('Failed to load payment SDK. Check your connection.');
-
-      const options = {
-        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
-        amount: 7500,
-        currency: 'INR',
-        name: 'FantasyIITH',
-        description: 'Season Pass — unlimited entries',
-        order_id: orderData.order_id,
-        handler: async (response) => {
-          const { data: vData, error: vErr } = await supabase.functions.invoke('payment-handler', {
-            body: {
-              action: 'verify-payment',
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature: response.razorpay_signature,
-              user_id: user.id,
-            },
-          });
-          if (vErr || !vData?.success) {
-            alert('Payment could not be verified. Please contact support with your payment ID: ' + response.razorpay_payment_id);
-            return;
-          }
-          // Update cached user in localStorage
-          const updatedUser = { ...user, has_paid: true };
-          localStorage.setItem('user', JSON.stringify(updatedUser));
-          setShowPayment(false);
-        },
-        prefill: { name: user.name },
-        theme: { color: '#D91E36' },
-        modal: { ondismiss: () => setPaymentLoading(false) },
-      };
-
-      const rzp = new window.Razorpay(options);
-      rzp.open();
-    } catch (err) {
-      alert(err.message || 'Payment failed. Please try again.');
-      setPaymentLoading(false);
+  async function handleUpiSubmit() {
+    if (!utrInput.trim()) return;
+    setSubmitLoading(true);
+    setSubmitMsg('');
+    const { data: existing } = await supabase
+      .from('payment_requests')
+      .select('id')
+      .eq('upi_transaction_id', utrInput.trim())
+      .maybeSingle();
+    if (existing) {
+      setSubmitMsg('This transaction ID has already been submitted.');
+      setSubmitLoading(false);
+      return;
     }
+    const { error } = await supabase.from('payment_requests').insert({
+      user_id: user.id,
+      upi_transaction_id: utrInput.trim(),
+    });
+    if (error) {
+      setSubmitMsg('Error: ' + error.message);
+    } else {
+      setPaymentStatus('pending');
+    }
+    setSubmitLoading(false);
   }
 
   const usedCredits = useMemo(() => selected.reduce((s, p) => s + p.credits, 0), [selected]);
@@ -369,11 +351,13 @@ export default function CreateTeam() {
     const s2 = teamSections(team2);
 
     function renderTeamCol(teamShort, sections) {
+      const teamSelected = teamCounts[teamShort] || 0;
       return (
         <div className="ct-lineup-col">
           <div className="ct-lineup-col-header">
             {getTeamLogo(teamShort) && <img src={getTeamLogo(teamShort)} alt="" className="ct-lineup-logo" />}
             <span>{teamShort}</span>
+            <span className="ct-lineup-col-count">{teamSelected > 0 ? teamSelected : ''}</span>
           </div>
           {sections.xi.length > 0 && (
             <>
@@ -412,26 +396,57 @@ export default function CreateTeam() {
   if (loading) return <MatchDetailSkeleton />;
 
   if (showPayment) {
+    const UPI_ID = 'sanvesh@ptyes';
+
+    // Pending state
+    if (paymentStatus === 'pending') {
+      return (
+        <div className="create-team-page" style={{ justifyContent: 'center', alignItems: 'center', padding: '24px 20px' }}>
+          <div style={{ textAlign: 'center', maxWidth: 340, width: '100%' }}>
+            <div style={{ fontSize: 48, marginBottom: 16 }}>⏳</div>
+            <h2 style={{ color: 'var(--text-primary)', margin: '0 0 10px', fontSize: 20, fontWeight: 700 }}>
+              Payment Under Review
+            </h2>
+            <p style={{ color: 'var(--text-muted)', fontSize: 14, lineHeight: 1.6, marginBottom: 24 }}>
+              We've received your transaction ID and will verify it shortly. You'll be unlocked within a few minutes.
+            </p>
+            <button className="btn" style={{ width: '100%', color: 'var(--text-muted)', height: 44, fontSize: 13 }} onClick={() => navigate(-1)}>
+              Go Back
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // Pay + submit UTR form (covers 'none' and 'rejected' states)
     return (
       <div className="create-team-page" style={{ justifyContent: 'center', alignItems: 'center', padding: '24px 20px' }}>
         <div style={{ textAlign: 'center', maxWidth: 340, width: '100%' }}>
 
-          {/* Progress nudge */}
-          <div style={{
-            background: 'linear-gradient(135deg, #7c3aed22, #a855f722)',
-            border: '1px solid #7c3aed44',
-            borderRadius: 12,
-            padding: '10px 16px',
-            marginBottom: 24,
-            fontSize: 13,
-            color: 'var(--accent)',
-            fontWeight: 600,
-          }}>
-            Your team is ready — one last step
-          </div>
+          {/* Rejection notice */}
+          {paymentStatus === 'rejected' && (
+            <div style={{
+              background: 'rgba(217,30,54,0.08)', border: '1px solid rgba(217,30,54,0.25)',
+              borderRadius: 12, padding: '10px 16px', marginBottom: 20,
+              fontSize: 13, color: 'var(--red-primary)',
+            }}>
+              Previous submission was rejected{adminNote ? `: ${adminNote}` : ''}. Please try again.
+            </div>
+          )}
 
-          {/* Hero */}
-          <h2 style={{ color: 'var(--text-primary)', margin: '0 0 6px', fontSize: 22, fontWeight: 700 }}>
+          {/* Progress nudge */}
+          {paymentStatus === 'none' && (
+            <div style={{
+              background: 'linear-gradient(135deg, #7c3aed22, #a855f722)',
+              border: '1px solid #7c3aed44',
+              borderRadius: 12, padding: '10px 16px', marginBottom: 24,
+              fontSize: 13, color: 'var(--accent)', fontWeight: 600,
+            }}>
+              Your team is ready — one last step
+            </div>
+          )}
+
+          <h2 style={{ color: 'var(--text-primary)', margin: '20px 0 6px', fontSize: 22, fontWeight: 700 }}>
             Unlock the Full Season
           </h2>
           <p style={{ color: 'var(--text-muted)', margin: '0 0 20px', lineHeight: 1.6, fontSize: 14 }}>
@@ -440,12 +455,8 @@ export default function CreateTeam() {
 
           {/* Price card */}
           <div style={{
-            background: 'var(--bg-elevated)',
-            borderRadius: 16,
-            padding: '20px 24px',
-            marginBottom: 16,
-            border: '2px solid var(--accent)',
-            position: 'relative',
+            background: 'var(--bg-elevated)', borderRadius: 16, padding: '20px 24px',
+            marginBottom: 20, border: '2px solid var(--accent)', position: 'relative',
           }}>
             <div style={{
               position: 'absolute', top: -12, left: '50%', transform: 'translateX(-50%)',
@@ -459,12 +470,12 @@ export default function CreateTeam() {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: 4 }}>
               <span style={{ fontSize: 11, fontWeight: 700, color: '#16a34a', background: '#dcfce7', padding: '2px 10px', borderRadius: 20, letterSpacing: 0.5 }}>FIRSTSEASON applied</span>
             </div>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 16 }}>one-time payment · valid till 20 Apr 2026</div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 16 }}>one-time platform fee · valid for IPL 2026</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, textAlign: 'left' }}>
               {[
                 'Unlimited team entries all season',
                 'Compete across multiple leagues',
-                'Full leaderboard & rankings',
+                'Access to all features — season leaderboard, H2H, compare & more',
                 'Private leagues with friends',
               ].map(item => (
                 <div key={item} style={{ fontSize: 13, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -474,28 +485,132 @@ export default function CreateTeam() {
             </div>
           </div>
 
-          {/* Social proof */}
-          <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 20 }}>
-            Your first match was free — ₹75 unlocks the full season
+          {/* Step 1 — Copy UPI ID */}
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.7px', marginBottom: 8, textAlign: 'left' }}>
+            Step 1 — Pay ₹75
+          </div>
+          <div style={{
+            background: 'var(--bg-elevated)', border: '1px solid var(--border)',
+            borderRadius: 14, padding: '12px 16px', marginBottom: 16, textAlign: 'left',
+          }}>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6 }}>Copy UPI ID and pay from any app</div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+              <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '0.3px' }}>{UPI_ID}</span>
+              <button
+                onClick={() => {
+                  const doCopy = () => {
+                    if (navigator.clipboard?.writeText) {
+                      navigator.clipboard.writeText(UPI_ID).catch(() => {
+                        const el = document.createElement('textarea');
+                        el.value = UPI_ID;
+                        document.body.appendChild(el);
+                        el.select();
+                        document.execCommand('copy');
+                        document.body.removeChild(el);
+                      });
+                    } else {
+                      const el = document.createElement('textarea');
+                      el.value = UPI_ID;
+                      document.body.appendChild(el);
+                      el.select();
+                      document.execCommand('copy');
+                      document.body.removeChild(el);
+                    }
+                    setUpiCopied(true);
+                    setTimeout(() => setUpiCopied(false), 3000);
+                  };
+                  doCopy();
+                }}
+                style={{
+                  padding: '6px 14px', fontSize: 12, fontWeight: 600, borderRadius: 8,
+                  border: `1px solid ${upiCopied ? 'rgba(76,175,80,0.4)' : 'var(--border)'}`,
+                  background: upiCopied ? 'rgba(76,175,80,0.12)' : 'transparent',
+                  color: upiCopied ? 'var(--green)' : 'var(--text-primary)',
+                  cursor: 'pointer', fontFamily: 'Poppins, sans-serif', whiteSpace: 'nowrap',
+                  transition: 'all 0.2s',
+                }}
+              >
+                {upiCopied ? 'Copied!' : 'Copy'}
+              </button>
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6 }}>Amount: <strong style={{ color: 'var(--text-primary)' }}>₹75</strong></div>
           </div>
 
+          {/* Step 2 — Enter UTR */}
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.7px', marginBottom: 8, textAlign: 'left' }}>
+            Step 2 — Enter Transaction ID
+          </div>
+          <input
+            className="input"
+            placeholder="UPI Transaction / UTR ID"
+            value={utrInput}
+            onChange={e => setUtrInput(e.target.value)}
+            style={{ marginBottom: 12, textAlign: 'center', letterSpacing: '0.5px' }}
+          />
+
+          {/* Terms & Conditions */}
+          <div style={{ marginBottom: 14 }}>
+            <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={agreedToTerms}
+                onChange={e => setAgreedToTerms(e.target.checked)}
+                style={{ marginTop: 2, accentColor: 'var(--accent)', width: 14, height: 14, flexShrink: 0 }}
+              />
+              <span style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5 }}>
+                I have read and agree to the{' '}
+                <button
+                  type="button"
+                  onClick={() => setShowTerms(v => !v)}
+                  style={{ background: 'none', border: 'none', padding: 0, color: 'var(--accent)', fontWeight: 600, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', textDecoration: 'underline' }}
+                >
+                  Terms & Conditions
+                </button>
+              </span>
+            </label>
+
+            {showTerms && (
+              <div style={{
+                marginTop: 10, background: 'var(--bg-elevated)', border: '1px solid var(--border)',
+                borderRadius: 12, padding: '14px 16px', maxHeight: 220, overflowY: 'auto', overscrollBehavior: 'contain',
+                fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.7, textAlign: 'left',
+              }}>
+                <div style={{ fontWeight: 700, color: 'var(--text-primary)', marginBottom: 8, fontSize: 12 }}>Terms & Conditions — PlayXI</div>
+                <div style={{ fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>1. Platform Access Fee</div>
+                <p style={{ margin: '0 0 10px' }}>The ₹75 payment is a one-time platform access fee for the IPL 2026 season. It is a subscription charge for using PlayXI and is not a wager, gambling stake, or entry fee for any prize contest.</p>
+                <div style={{ fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>2. No Prizes or Winnings</div>
+                <p style={{ margin: '0 0 10px' }}>PlayXI does not offer monetary prizes, rewards, or payouts of any kind. Leaderboard rankings and performance statistics are for entertainment and competitive tracking purposes only among community participants.</p>
+                <div style={{ fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>3. Eligibility</div>
+                <p style={{ margin: '0 0 10px' }}>You must be 18 years of age or older to use this platform. By completing payment, you confirm that you meet this requirement.</p>
+                <div style={{ fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>4. Refund Policy</div>
+                <p style={{ margin: '0 0 10px' }}>The platform access fee is non-refundable once the IPL 2026 season has commenced. Refund requests before the season begins may be considered at the platform's discretion.</p>
+                <div style={{ fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>5. Platform Availability</div>
+                <p style={{ margin: '0 0 10px' }}>PlayXI is a private community platform. We do not guarantee uninterrupted availability and reserve the right to modify or discontinue features at any time without prior notice.</p>
+                <div style={{ fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>6. Data & Privacy</div>
+                <p style={{ margin: '0 0 10px' }}>By using PlayXI, you consent to the collection and use of your data solely for platform functionality. We do not sell or share your personal data with third parties.</p>
+                <div style={{ fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4 }}>7. Governing Law</div>
+                <p style={{ margin: '0' }}>These terms are governed by the laws of India. Any disputes shall be resolved through mutual discussion between the user and the platform administrators.</p>
+              </div>
+            )}
+          </div>
+
+          {submitMsg && (
+            <div style={{ fontSize: 12, color: 'var(--red-primary)', marginBottom: 10, textAlign: 'left' }}>{submitMsg}</div>
+          )}
           <button
             className="btn btn-primary"
-            style={{ width: '100%', marginBottom: 10, height: 52, fontSize: 16, fontWeight: 700, borderRadius: 14 }}
-            disabled={paymentLoading}
-            onClick={handlePayment}
+            style={{ width: '100%', marginBottom: 10, height: 48, fontSize: 15, fontWeight: 700, borderRadius: 14 }}
+            disabled={submitLoading || !utrInput.trim() || !agreedToTerms}
+            onClick={handleUpiSubmit}
           >
-            {paymentLoading ? 'Opening payment...' : 'Pay ₹75 & Join Season'}
+            {submitLoading ? 'Submitting…' : 'Submit for Verification'}
           </button>
-          <button
-            className="btn"
-            style={{ width: '100%', color: 'var(--text-muted)', height: 44, fontSize: 13 }}
-            onClick={() => navigate(-1)}
-          >
+
+          <button className="btn" style={{ width: '100%', color: 'var(--text-muted)', height: 44, fontSize: 13 }} onClick={() => navigate(-1)}>
             Maybe later
           </button>
           <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 12, opacity: 0.7 }}>
-            Secured payment via Razorpay · UPI, Cards, NetBanking accepted
+            We verify manually — you'll be unlocked within a few minutes
           </p>
         </div>
       </div>
@@ -534,32 +649,6 @@ export default function CreateTeam() {
         <button className="header-icon-btn" onClick={() => navigate('/points')} title="Points">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
         </button>
-      </div>
-
-      {/* Dream11-style team comp bar */}
-      <div className="d11-comp">
-        <div className="d11-comp-col">
-          <span className="d11-comp-label">Players</span>
-          <span className="d11-comp-value">{selected.length}<span className="d11-comp-dim">/11</span></span>
-        </div>
-        <div className="d11-comp-team">
-          {getTeamLogo(match?.team1_short) && <img className="d11-team-logo" src={getTeamLogo(match?.team1_short)} alt="" />}
-          <div>
-            <span className="d11-comp-label">{match?.team1_short}</span>
-            <span className="d11-comp-value">{teamCounts[match?.team1_short] || 0}</span>
-          </div>
-        </div>
-        <div className="d11-comp-team">
-          {getTeamLogo(match?.team2_short) && <img className="d11-team-logo" src={getTeamLogo(match?.team2_short)} alt="" />}
-          <div>
-            <span className="d11-comp-label">{match?.team2_short}</span>
-            <span className="d11-comp-value">{teamCounts[match?.team2_short] || 0}</span>
-          </div>
-        </div>
-        <div className="d11-comp-col">
-          <span className="d11-comp-label">Credits Left</span>
-          <span className={`d11-comp-value ${remainingCredits < 10 ? 'ct-stat-warn' : ''}`}>{remainingCredits.toFixed(1)}</span>
-        </div>
       </div>
 
       {/* Toss result banner */}
@@ -601,15 +690,29 @@ export default function CreateTeam() {
         </div>
       )}
 
-      {/* Player slot boxes */}
-      <div className="d11-slots">
-        {Array.from({ length: 11 }).map((_, i) => (
-          <div key={i} className={`d11-slot ${i < selected.length ? 'd11-slot-filled' : ''}`}>
-            {i === selected.length - 1
-              ? <span className="d11-slot-num">{selected.length}</span>
-              : null}
-          </div>
-        ))}
+      {/* Slot bar row: team1 | slots | team2 | credits */}
+      <div className="d11-slots-row">
+        <div className="d11-slots-team">
+          {getTeamLogo(match?.team1_short) && <img className="d11-team-logo" src={getTeamLogo(match?.team1_short)} alt="" />}
+          <span className="d11-slots-team-count">{teamCounts[match?.team1_short] || 0}</span>
+        </div>
+        <div className="d11-slots">
+          {Array.from({ length: 11 }).map((_, i) => (
+            <div key={i} className={`d11-slot ${i < selected.length ? 'd11-slot-filled' : ''}`}>
+              {i === selected.length - 1
+                ? <span className="d11-slot-num">{selected.length}</span>
+                : null}
+            </div>
+          ))}
+        </div>
+        <div className="d11-slots-team">
+          <span className="d11-slots-team-count">{teamCounts[match?.team2_short] || 0}</span>
+          {getTeamLogo(match?.team2_short) && <img className="d11-team-logo" src={getTeamLogo(match?.team2_short)} alt="" />}
+        </div>
+        <div className="d11-slots-credits">
+          <span className={`d11-slots-credits-val ${remainingCredits < 10 ? 'ct-stat-warn' : ''}`}>{remainingCredits.toFixed(1)}</span>
+          <span className="d11-slots-credits-label">Cr left</span>
+        </div>
       </div>
 
 
