@@ -89,14 +89,45 @@ function SmallBtn({ onClick, disabled, loading, loadingLabel, label, danger }) {
 
 // ─── Sync Tab ─────────────────────────────────────────────────────────────────
 
+const IPL_TEAMS = {
+  SRH: 'Sunrisers Hyderabad', DC: 'Delhi Capitals', MI: 'Mumbai Indians',
+  CSK: 'Chennai Super Kings', KKR: 'Kolkata Knight Riders',
+  RCB: 'Royal Challengers Bengaluru', RR: 'Rajasthan Royals',
+  LSG: 'Lucknow Super Giants', GT: 'Gujarat Titans', PBKS: 'Punjab Kings',
+};
+
+function parseCricbuzzUrl(url) {
+  try {
+    const m = url.match(/live-cricket-scores\/(\d+)\/([a-z]+)-vs-([a-z]+)-(\d+)\w*-match/);
+    if (!m) return null;
+    const [, external_id, t1, t2, num] = m;
+    const team1_short = t1.toUpperCase();
+    const team2_short = t2.toUpperCase();
+    return {
+      external_id,
+      team1_short,
+      team2_short,
+      team1_name: IPL_TEAMS[team1_short] || team1_short,
+      team2_name: IPL_TEAMS[team2_short] || team2_short,
+      match_number: parseInt(num),
+    };
+  } catch { return null; }
+}
+
 function SyncTab({ matches, onMatchesChange }) {
   const [loading, setLoading] = useState({});
   const [results, setResults] = useState({});
-  const [newMatch, setNewMatch] = useState({
-    team1_name: '', team1_short: '', team2_name: '', team2_short: '',
-    match_number: '', start_time: '', external_id: '', series_id: '9241',
-  });
+  const [cricbuzzUrl, setCricbuzzUrl] = useState('');
+  const [parsed, setParsed] = useState(null);
+  const [startTime, setStartTime] = useState('');
+  const [seriesId, setSeriesId] = useState('9241');
   const [createStatus, setCreateStatus] = useState('');
+
+  function handleUrlChange(val) {
+    setCricbuzzUrl(val);
+    setParsed(parseCricbuzzUrl(val));
+    setCreateStatus('');
+  }
 
   async function callFn(key, url, body) {
     setLoading(p => ({ ...p, [key]: true }));
@@ -118,22 +149,25 @@ function SyncTab({ matches, onMatchesChange }) {
 
   async function createMatch(e) {
     e.preventDefault();
+    if (!parsed) return;
     setCreateStatus('creating');
     try {
       const { error } = await supabase.from('matches').insert({
-        team1_name: newMatch.team1_name,
-        team1_short: newMatch.team1_short.toUpperCase(),
-        team2_name: newMatch.team2_name,
-        team2_short: newMatch.team2_short.toUpperCase(),
-        match_number: parseInt(newMatch.match_number),
-        start_time: new Date(newMatch.start_time).toISOString(),
-        external_id: newMatch.external_id,
-        series_id: newMatch.series_id,
+        team1_name: parsed.team1_name,
+        team1_short: parsed.team1_short,
+        team2_name: parsed.team2_name,
+        team2_short: parsed.team2_short,
+        match_number: parsed.match_number,
+        start_time: new Date(startTime).toISOString(),
+        external_id: parsed.external_id,
+        series_id: seriesId,
         status: 'upcoming',
       });
       if (error) throw new Error(error.message);
       setCreateStatus('Match created!');
-      setNewMatch({ team1_name: '', team1_short: '', team2_name: '', team2_short: '', match_number: '', start_time: '', external_id: '', series_id: '9241' });
+      setCricbuzzUrl('');
+      setParsed(null);
+      setStartTime('');
       onMatchesChange();
     } catch (err) {
       setCreateStatus('Error: ' + err.message);
@@ -155,21 +189,53 @@ function SyncTab({ matches, onMatchesChange }) {
       <div className="card">
         <SectionTitle>Create Match</SectionTitle>
         <form onSubmit={createMatch} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 10 }}>
-            <input className="input" placeholder="Team 1 Full Name" value={newMatch.team1_name} onChange={e => setNewMatch(p => ({ ...p, team1_name: e.target.value }))} required />
-            <input className="input" placeholder="T1 Short" value={newMatch.team1_short} onChange={e => setNewMatch(p => ({ ...p, team1_short: e.target.value }))} required maxLength={5} style={{ width: 90 }} />
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 10 }}>
-            <input className="input" placeholder="Team 2 Full Name" value={newMatch.team2_name} onChange={e => setNewMatch(p => ({ ...p, team2_name: e.target.value }))} required />
-            <input className="input" placeholder="T2 Short" value={newMatch.team2_short} onChange={e => setNewMatch(p => ({ ...p, team2_short: e.target.value }))} required maxLength={5} style={{ width: 90 }} />
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <input className="input" placeholder="Match No." type="number" value={newMatch.match_number} onChange={e => setNewMatch(p => ({ ...p, match_number: e.target.value }))} required />
-            <input className="input" placeholder="External ID" value={newMatch.external_id} onChange={e => setNewMatch(p => ({ ...p, external_id: e.target.value }))} required />
-          </div>
-          <input className="input" type="datetime-local" value={newMatch.start_time} onChange={e => setNewMatch(p => ({ ...p, start_time: e.target.value }))} required />
-          <input className="input" placeholder="Series ID (9241)" value={newMatch.series_id} onChange={e => setNewMatch(p => ({ ...p, series_id: e.target.value }))} required />
-          <button className="btn btn-primary" type="submit" disabled={createStatus === 'creating'} style={{ minHeight: 44 }}>
+          <input
+            className="input"
+            placeholder="Cricbuzz URL (e.g. https://www.cricbuzz.com/live-cricket-scores/151856/...)"
+            value={cricbuzzUrl}
+            onChange={e => handleUrlChange(e.target.value)}
+            required
+          />
+          {cricbuzzUrl && !parsed && (
+            <div style={{ fontSize: 12, color: 'var(--color-error, #f87171)', padding: '4px 2px' }}>
+              Could not parse URL — check the format
+            </div>
+          )}
+          {parsed && (
+            <div style={{ background: 'var(--bg-elevated)', borderRadius: 8, padding: '10px 12px', fontSize: 13, display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <div style={{ display: 'flex', gap: 12 }}>
+                <span style={{ color: 'var(--text-muted)', minWidth: 90 }}>Teams</span>
+                <span style={{ fontWeight: 600 }}>{parsed.team1_short} vs {parsed.team2_short}</span>
+              </div>
+              <div style={{ display: 'flex', gap: 12 }}>
+                <span style={{ color: 'var(--text-muted)', minWidth: 90 }}>Full names</span>
+                <span>{parsed.team1_name} vs {parsed.team2_name}</span>
+              </div>
+              <div style={{ display: 'flex', gap: 12 }}>
+                <span style={{ color: 'var(--text-muted)', minWidth: 90 }}>Match #</span>
+                <span>{parsed.match_number}</span>
+              </div>
+              <div style={{ display: 'flex', gap: 12 }}>
+                <span style={{ color: 'var(--text-muted)', minWidth: 90 }}>External ID</span>
+                <span>{parsed.external_id}</span>
+              </div>
+            </div>
+          )}
+          <input
+            className="input"
+            type="datetime-local"
+            value={startTime}
+            onChange={e => setStartTime(e.target.value)}
+            required
+          />
+          <input
+            className="input"
+            placeholder="Series ID (9241)"
+            value={seriesId}
+            onChange={e => setSeriesId(e.target.value)}
+            required
+          />
+          <button className="btn btn-primary" type="submit" disabled={createStatus === 'creating' || !parsed} style={{ minHeight: 44 }}>
             {createStatus === 'creating' ? 'Creating…' : 'Create Match'}
           </button>
           <StatusMsg msg={createStatus === 'creating' ? '' : createStatus} />
