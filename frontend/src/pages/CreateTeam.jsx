@@ -9,6 +9,59 @@ import { MatchDetailSkeleton } from '../components/Skeleton';
 import { isFantasyRosterActive } from '../lib/matchPlayers';
 import './CreateTeam.css';
 
+function PendingPaymentScreen({ status, onApproved, onContinue, userId }) {
+  const navigate = useNavigate();
+  const pollRef = useRef(null);
+
+  useEffect(() => {
+    if (status !== 'pending') return;
+    pollRef.current = setInterval(async () => {
+      const { data } = await supabase.from('users').select('has_paid').eq('id', userId).single();
+      if (data?.has_paid) { clearInterval(pollRef.current); onApproved(); }
+    }, 20000);
+    return () => clearInterval(pollRef.current);
+  }, [status]);
+
+  const pageStyle = { justifyContent: 'center', alignItems: 'center', padding: '24px 20px', paddingBottom: 'calc(var(--nav-height) + 32px)' };
+  const innerStyle = { textAlign: 'center', maxWidth: 340, width: '100%' };
+
+  if (status === 'approved') {
+    return (
+      <div className="create-team-page" style={pageStyle}>
+        <div style={innerStyle}>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>🎉</div>
+          <h2 style={{ color: 'var(--text-primary)', margin: '0 0 10px', fontSize: 20, fontWeight: 700 }}>Payment Approved!</h2>
+          <p style={{ color: 'var(--text-muted)', fontSize: 14, lineHeight: 1.6, marginBottom: 24 }}>
+            You're all set for the season. Continue to build your team.
+          </p>
+          <button className="btn btn-primary" style={{ width: '100%', height: 48 }} onClick={onContinue}>
+            Continue
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="create-team-page" style={pageStyle}>
+      <div style={innerStyle}>
+        <div style={{ fontSize: 48, marginBottom: 16 }}>⏳</div>
+        <h2 style={{ color: 'var(--text-primary)', margin: '0 0 10px', fontSize: 20, fontWeight: 700 }}>Payment Under Review</h2>
+        <p style={{ color: 'var(--text-muted)', fontSize: 14, lineHeight: 1.6, marginBottom: 24 }}>
+          We've received your transaction ID and will verify it shortly. You'll be unlocked within a few minutes.
+        </p>
+        <button
+          className="btn btn-outline"
+          style={{ width: '100%', height: 48, fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+          onClick={() => navigate('/leagues')}
+        >
+          ← Back to Home
+        </button>
+      </div>
+    </div>
+  );
+}
+
 const ROLES = ['WK', 'BAT', 'AR', 'BOWL'];
 const ROLE_LABELS = { WK: 'Wicket-Keeper', BAT: 'Batsman', AR: 'All-Rounder', BOWL: 'Bowler' };
 const ROLE_LIMITS = { WK: { min: 1, max: 11 }, BAT: { min: 1, max: 11 }, AR: { min: 1, max: 11 }, BOWL: { min: 1, max: 11 } };
@@ -401,22 +454,14 @@ export default function CreateTeam() {
     const UPI_ID = 'sanvesh@ptyes';
 
     // Pending state
-    if (paymentStatus === 'pending') {
+    if (paymentStatus === 'pending' || paymentStatus === 'approved') {
       return (
-        <div className="create-team-page" style={{ justifyContent: 'center', alignItems: 'center', padding: '24px 20px' }}>
-          <div style={{ textAlign: 'center', maxWidth: 340, width: '100%' }}>
-            <div style={{ fontSize: 48, marginBottom: 16 }}>⏳</div>
-            <h2 style={{ color: 'var(--text-primary)', margin: '0 0 10px', fontSize: 20, fontWeight: 700 }}>
-              Payment Under Review
-            </h2>
-            <p style={{ color: 'var(--text-muted)', fontSize: 14, lineHeight: 1.6, marginBottom: 24 }}>
-              We've received your transaction ID and will verify it shortly. You'll be unlocked within a few minutes.
-            </p>
-            <button className="btn" style={{ width: '100%', color: 'var(--text-muted)', height: 44, fontSize: 13 }} onClick={() => navigate(-1)}>
-              Go Back
-            </button>
-          </div>
-        </div>
+        <PendingPaymentScreen
+          status={paymentStatus}
+          onApproved={() => setPaymentStatus('approved')}
+          onContinue={() => { setShowPayment(false); }}
+          userId={user.id}
+        />
       );
     }
 

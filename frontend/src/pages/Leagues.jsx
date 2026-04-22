@@ -1,8 +1,92 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { getUser } from '../lib/auth';
 import { LeaguesSkeleton } from '../components/Skeleton';
+
+const PAYMENTS_ENABLED = import.meta.env.VITE_PAYMENTS_ENABLED === 'true';
+const APPROVED_SEEN_KEY = 'payment_approved_seen_v3';
+
+function PaymentBanner({ userId }) {
+  const [banner, setBanner] = useState(null); // 'pending' | 'approved' | 'rejected'
+  const [adminNote, setAdminNote] = useState('');
+  const pollRef = useRef(null);
+
+  async function checkStatus() {
+    const { data: req } = await supabase
+      .from('payment_requests')
+      .select('status, admin_note')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (!req) return;
+
+    if (req.status === 'pending') {
+      setBanner('pending');
+    } else if (req.status === 'approved') {
+      if (!localStorage.getItem(APPROVED_SEEN_KEY)) {
+        setBanner('approved');
+      }
+      clearInterval(pollRef.current);
+    } else if (req.status === 'rejected') {
+      setBanner('rejected');
+      setAdminNote(req.admin_note || '');
+      clearInterval(pollRef.current);
+    }
+  }
+
+  useEffect(() => {
+    if (!PAYMENTS_ENABLED) return;
+    checkStatus();
+    pollRef.current = setInterval(checkStatus, 20000);
+    return () => clearInterval(pollRef.current);
+  }, [userId]);
+
+  if (!banner) return null;
+
+  const styles = {
+    pending:  { borderColor: 'var(--gold)',        iconColor: 'var(--gold)',        icon: '⏳' },
+    approved: { borderColor: 'var(--green)',        iconColor: 'var(--green)',       icon: '✓'  },
+    rejected: { borderColor: 'var(--red-primary)',  iconColor: 'var(--red-primary)', icon: '✕'  },
+  }[banner];
+
+  return (
+    <div style={{
+      borderLeft: `3px solid ${styles.borderColor}`,
+      background: 'var(--bg-surface)',
+      borderRadius: 10,
+      padding: '12px 14px',
+      marginBottom: 16,
+      fontSize: 13,
+      color: 'var(--text-primary)',
+      display: 'flex',
+      alignItems: 'flex-start',
+      gap: 10,
+    }}>
+      <span style={{ color: styles.iconColor, fontSize: 15, marginTop: 1, flexShrink: 0 }}>{styles.icon}</span>
+      {banner === 'pending' && (
+        <span style={{ color: 'var(--text-secondary)' }}>Your payment is under review — we'll update you here once approved.</span>
+      )}
+      {banner === 'approved' && (
+        <div style={{ flex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
+          <span>Payment approved! You're all set for the season.</span>
+          <button
+            onClick={() => { localStorage.setItem(APPROVED_SEEN_KEY, '1'); setBanner(null); }}
+            style={{ background: 'var(--green)', color: '#fff', border: 'none', borderRadius: 8, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}
+          >Got it</button>
+        </div>
+      )}
+      {banner === 'rejected' && (
+        <div>
+          <div>Payment rejected{adminNote ? `: ${adminNote}` : '.'}</div>
+          <div style={{ fontSize: 12, marginTop: 3, color: 'var(--text-secondary)' }}>Go to any match to resubmit your transaction ID.</div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 const TTL_MS = 30 * 60 * 1000; // 30 minutes
 let leaguesCache = null;
@@ -64,6 +148,8 @@ export default function Leagues() {
   return (
     <div className="page fade-in">
       <h1 className="page-title">My Leagues</h1>
+
+      <PaymentBanner userId={user.id} />
 
       <div style={{ display: 'flex', gap: 12, marginBottom: 20 }}>
         <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => navigate('/leagues/create')}>
