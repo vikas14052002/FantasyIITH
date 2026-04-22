@@ -214,6 +214,9 @@ export default function TeamPreview() {
           <div className="field-crease field-crease-bottom" />
           <div className="field-boundary" />
 
+          {/* Watermark behind players */}
+          <div className="field-watermark">PlayXI</div>
+
           {/* Player rows by role */}
           <div className="field-content">
             {sortedRoles.map(role => (

@@ -26,6 +26,10 @@ export default function CaptainSelect() {
   const [vcId, setVcId] = useState(initialVc);
   const [saving, setSaving] = useState(false);
 
+  // Derive team1/team2 for B&W coloring (sorted alphabetically for consistency)
+  const teamNames = [...new Set(players.map(p => p.team))].sort();
+  const [team1Name, team2Name] = teamNames;
+
   const handleCaptain = (playerId) => {
     if (vcId === playerId) setVcId(null);
     setCaptainId(captainId === playerId ? null : playerId);
@@ -140,7 +144,7 @@ export default function CaptainSelect() {
             <div className="player-info">
               <div className="player-name">{p.name}</div>
               <div className="player-meta">
-                <span className="team-tag">{p.team}</span>
+                <span className={`team-tag ${p.team === team1Name ? 'team-tag-t1' : 'team-tag-t2'}`}>{p.team}</span>
                 <span>{p.role}</span>
               </div>
             </div>

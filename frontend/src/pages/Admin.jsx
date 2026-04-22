@@ -89,14 +89,45 @@ function SmallBtn({ onClick, disabled, loading, loadingLabel, label, danger }) {
 
 // ─── Sync Tab ─────────────────────────────────────────────────────────────────
 
+const IPL_TEAMS = {
+  SRH: 'Sunrisers Hyderabad', DC: 'Delhi Capitals', MI: 'Mumbai Indians',
+  CSK: 'Chennai Super Kings', KKR: 'Kolkata Knight Riders',
+  RCB: 'Royal Challengers Bengaluru', RR: 'Rajasthan Royals',
+  LSG: 'Lucknow Super Giants', GT: 'Gujarat Titans', PBKS: 'Punjab Kings',
+};
+
+function parseCricbuzzUrl(url) {
+  try {
+    const m = url.match(/live-cricket-scores\/(\d+)\/([a-z]+)-vs-([a-z]+)-(\d+)\w*-match/);
+    if (!m) return null;
+    const [, external_id, t1, t2, num] = m;
+    const team1_short = t1.toUpperCase();
+    const team2_short = t2.toUpperCase();
+    return {
+      external_id,
+      team1_short,
+      team2_short,
+      team1_name: IPL_TEAMS[team1_short] || team1_short,
+      team2_name: IPL_TEAMS[team2_short] || team2_short,
+      match_number: parseInt(num),
+    };
+  } catch { return null; }
+}
+
 function SyncTab({ matches, onMatchesChange }) {
   const [loading, setLoading] = useState({});
   const [results, setResults] = useState({});
-  const [newMatch, setNewMatch] = useState({
-    team1_name: '', team1_short: '', team2_name: '', team2_short: '',
-    match_number: '', start_time: '', external_id: '', series_id: '9241',
-  });
+  const [cricbuzzUrl, setCricbuzzUrl] = useState('');
+  const [parsed, setParsed] = useState(null);
+  const [startTime, setStartTime] = useState('');
+  const [seriesId, setSeriesId] = useState('9241');
   const [createStatus, setCreateStatus] = useState('');
+
+  function handleUrlChange(val) {
+    setCricbuzzUrl(val);
+    setParsed(parseCricbuzzUrl(val));
+    setCreateStatus('');
+  }
 
   async function callFn(key, url, body) {
     setLoading(p => ({ ...p, [key]: true }));
@@ -118,22 +149,25 @@ function SyncTab({ matches, onMatchesChange }) {
 
   async function createMatch(e) {
     e.preventDefault();
+    if (!parsed) return;
     setCreateStatus('creating');
     try {
       const { error } = await supabase.from('matches').insert({
-        team1_name: newMatch.team1_name,
-        team1_short: newMatch.team1_short.toUpperCase(),
-        team2_name: newMatch.team2_name,
-        team2_short: newMatch.team2_short.toUpperCase(),
-        match_number: parseInt(newMatch.match_number),
-        start_time: new Date(newMatch.start_time).toISOString(),
-        external_id: newMatch.external_id,
-        series_id: newMatch.series_id,
+        team1_name: parsed.team1_name,
+        team1_short: parsed.team1_short,
+        team2_name: parsed.team2_name,
+        team2_short: parsed.team2_short,
+        match_number: parsed.match_number,
+        start_time: new Date(startTime).toISOString(),
+        external_id: parsed.external_id,
+        series_id: seriesId,
         status: 'upcoming',
       });
       if (error) throw new Error(error.message);
       setCreateStatus('Match created!');
-      setNewMatch({ team1_name: '', team1_short: '', team2_name: '', team2_short: '', match_number: '', start_time: '', external_id: '', series_id: '9241' });
+      setCricbuzzUrl('');
+      setParsed(null);
+      setStartTime('');
       onMatchesChange();
     } catch (err) {
       setCreateStatus('Error: ' + err.message);
@@ -155,21 +189,53 @@ function SyncTab({ matches, onMatchesChange }) {
       <div className="card">
         <SectionTitle>Create Match</SectionTitle>
         <form onSubmit={createMatch} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 10 }}>
-            <input className="input" placeholder="Team 1 Full Name" value={newMatch.team1_name} onChange={e => setNewMatch(p => ({ ...p, team1_name: e.target.value }))} required />
-            <input className="input" placeholder="T1 Short" value={newMatch.team1_short} onChange={e => setNewMatch(p => ({ ...p, team1_short: e.target.value }))} required maxLength={5} style={{ width: 90 }} />
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 10 }}>
-            <input className="input" placeholder="Team 2 Full Name" value={newMatch.team2_name} onChange={e => setNewMatch(p => ({ ...p, team2_name: e.target.value }))} required />
-            <input className="input" placeholder="T2 Short" value={newMatch.team2_short} onChange={e => setNewMatch(p => ({ ...p, team2_short: e.target.value }))} required maxLength={5} style={{ width: 90 }} />
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <input className="input" placeholder="Match No." type="number" value={newMatch.match_number} onChange={e => setNewMatch(p => ({ ...p, match_number: e.target.value }))} required />
-            <input className="input" placeholder="External ID" value={newMatch.external_id} onChange={e => setNewMatch(p => ({ ...p, external_id: e.target.value }))} required />
-          </div>
-          <input className="input" type="datetime-local" value={newMatch.start_time} onChange={e => setNewMatch(p => ({ ...p, start_time: e.target.value }))} required />
-          <input className="input" placeholder="Series ID (9241)" value={newMatch.series_id} onChange={e => setNewMatch(p => ({ ...p, series_id: e.target.value }))} required />
-          <button className="btn btn-primary" type="submit" disabled={createStatus === 'creating'} style={{ minHeight: 44 }}>
+          <input
+            className="input"
+            placeholder="Cricbuzz URL (e.g. https://www.cricbuzz.com/live-cricket-scores/151856/...)"
+            value={cricbuzzUrl}
+            onChange={e => handleUrlChange(e.target.value)}
+            required
+          />
+          {cricbuzzUrl && !parsed && (
+            <div style={{ fontSize: 12, color: 'var(--color-error, #f87171)', padding: '4px 2px' }}>
+              Could not parse URL — check the format
+            </div>
+          )}
+          {parsed && (
+            <div style={{ background: 'var(--bg-elevated)', borderRadius: 8, padding: '10px 12px', fontSize: 13, display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <div style={{ display: 'flex', gap: 12 }}>
+                <span style={{ color: 'var(--text-muted)', minWidth: 90 }}>Teams</span>
+                <span style={{ fontWeight: 600 }}>{parsed.team1_short} vs {parsed.team2_short}</span>
+              </div>
+              <div style={{ display: 'flex', gap: 12 }}>
+                <span style={{ color: 'var(--text-muted)', minWidth: 90 }}>Full names</span>
+                <span>{parsed.team1_name} vs {parsed.team2_name}</span>
+              </div>
+              <div style={{ display: 'flex', gap: 12 }}>
+                <span style={{ color: 'var(--text-muted)', minWidth: 90 }}>Match #</span>
+                <span>{parsed.match_number}</span>
+              </div>
+              <div style={{ display: 'flex', gap: 12 }}>
+                <span style={{ color: 'var(--text-muted)', minWidth: 90 }}>External ID</span>
+                <span>{parsed.external_id}</span>
+              </div>
+            </div>
+          )}
+          <input
+            className="input"
+            type="datetime-local"
+            value={startTime}
+            onChange={e => setStartTime(e.target.value)}
+            required
+          />
+          <input
+            className="input"
+            placeholder="Series ID (9241)"
+            value={seriesId}
+            onChange={e => setSeriesId(e.target.value)}
+            required
+          />
+          <button className="btn btn-primary" type="submit" disabled={createStatus === 'creating' || !parsed} style={{ minHeight: 44 }}>
             {createStatus === 'creating' ? 'Creating…' : 'Create Match'}
           </button>
           <StatusMsg msg={createStatus === 'creating' ? '' : createStatus} />
@@ -1202,6 +1268,206 @@ function M11SyncTab({ matches }) {
   );
 }
 
+// ─── Payments Tab ─────────────────────────────────────────────────────────────
+
+function PaymentRequestCard({ req, processing, onApprove, onReject }) {
+  const statusColor = { approved: 'var(--green)', rejected: 'var(--red-primary)', pending: '#F57C00' };
+  const statusBg = { approved: 'rgba(76,175,80,0.12)', rejected: 'rgba(217,30,54,0.12)', pending: 'rgba(255,152,0,0.12)' };
+  const statusBorder = { approved: 'rgba(76,175,80,0.3)', rejected: 'rgba(217,30,54,0.3)', pending: 'rgba(255,152,0,0.3)' };
+  return (
+    <div style={{ padding: '14px 0', borderBottom: '1px solid var(--border)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+        <div>
+          <div style={{ fontSize: 14, fontWeight: 700 }}>{req.users?.name}</div>
+          <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
+            UTR: <span style={{ fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '0.3px' }}>{req.upi_transaction_id}</span>
+          </div>
+          <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 3 }}>
+            {new Date(req.created_at).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}
+          </div>
+          {req.admin_note && (
+            <div style={{ fontSize: 11, color: 'var(--red-primary)', marginTop: 4 }}>Note: {req.admin_note}</div>
+          )}
+        </div>
+        <span style={{
+          fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 20,
+          background: statusBg[req.status], color: statusColor[req.status],
+          border: `1px solid ${statusBorder[req.status]}`, textTransform: 'uppercase', whiteSpace: 'nowrap',
+        }}>{req.status}</span>
+      </div>
+      {req.status === 'pending' && (
+        <div style={{ display: 'flex', gap: 8 }}>
+          <SmallBtn onClick={() => onApprove(req)} loading={processing === req.id} label="Approve" loadingLabel="Approving…" />
+          <SmallBtn onClick={() => onReject(req)} loading={processing === req.id} label="Reject" loadingLabel="Rejecting…" danger />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PaymentsTab() {
+  const [requests, setRequests] = useState([]);
+  const [filter, setFilter] = useState('pending');
+  const [processing, setProcessing] = useState(null);
+  const [msg, setMsg] = useState('');
+  const [utrSearch, setUtrSearch] = useState('');
+  const [searchResult, setSearchResult] = useState(null); // null | 'not_found' | req object
+  const [searching, setSearching] = useState(false);
+  const [rejectNote, setRejectNote] = useState('');
+  const [showRejectFor, setShowRejectFor] = useState(null);
+
+  useEffect(() => { loadRequests(); }, [filter]);
+
+  async function loadRequests() {
+    let q = supabase
+      .from('payment_requests')
+      .select('id, user_id, upi_transaction_id, status, admin_note, created_at, users(name)')
+      .order('created_at', { ascending: false });
+    if (filter !== 'all') q = q.eq('status', filter);
+    const { data } = await q;
+    setRequests(data || []);
+  }
+
+  async function searchByUtr() {
+    if (!utrSearch.trim()) return;
+    setSearching(true);
+    setSearchResult(null);
+    setMsg('');
+    const { data } = await supabase
+      .from('payment_requests')
+      .select('id, user_id, upi_transaction_id, status, admin_note, created_at, users(name)')
+      .eq('upi_transaction_id', utrSearch.trim())
+      .maybeSingle();
+    setSearchResult(data || 'not_found');
+    setSearching(false);
+  }
+
+  async function approve(req) {
+    setProcessing(req.id);
+    setMsg('');
+    await supabase.from('payment_requests').update({ status: 'approved', reviewed_at: new Date().toISOString() }).eq('id', req.id);
+    const { error } = await supabase.from('users').update({ has_paid: true }).eq('id', req.user_id);
+    if (error) setMsg('Error: ' + error.message);
+    else {
+      setMsg('Approved: ' + req.users?.name);
+      if (searchResult && searchResult !== 'not_found' && searchResult.id === req.id) {
+        setSearchResult({ ...searchResult, status: 'approved' });
+      }
+      await loadRequests();
+    }
+    setProcessing(null);
+  }
+
+  async function reject(req) {
+    setShowRejectFor(req);
+    setRejectNote('');
+  }
+
+  async function confirmReject() {
+    const req = showRejectFor;
+    setShowRejectFor(null);
+    setProcessing(req.id);
+    setMsg('');
+    const { error } = await supabase.from('payment_requests').update({
+      status: 'rejected',
+      admin_note: rejectNote.trim() || null,
+      reviewed_at: new Date().toISOString(),
+    }).eq('id', req.id);
+    if (error) setMsg('Error: ' + error.message);
+    else {
+      setMsg('Rejected.');
+      if (searchResult && searchResult !== 'not_found' && searchResult.id === req.id) {
+        setSearchResult({ ...searchResult, status: 'rejected', admin_note: rejectNote.trim() || null });
+      }
+      await loadRequests();
+    }
+    setProcessing(null);
+    setRejectNote('');
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+
+      {/* Reject note modal */}
+      {showRejectFor && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 100,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+        }}>
+          <div style={{ background: 'var(--bg-surface)', borderRadius: 16, padding: 24, width: '100%', maxWidth: 360 }}>
+            <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>Reject Payment</div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 14 }}>
+              User: <strong>{showRejectFor.users?.name}</strong>
+            </div>
+            <input
+              className="input"
+              placeholder="Rejection reason (optional)"
+              value={rejectNote}
+              onChange={e => setRejectNote(e.target.value)}
+              style={{ marginBottom: 12 }}
+            />
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => setShowRejectFor(null)} style={{
+                flex: 1, padding: '10px 0', borderRadius: 10, border: '1px solid var(--border)',
+                background: 'transparent', color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer', fontFamily: 'Poppins, sans-serif',
+              }}>Cancel</button>
+              <button onClick={confirmReject} style={{
+                flex: 1, padding: '10px 0', borderRadius: 10, border: 'none',
+                background: 'rgba(217,30,54,0.15)', color: 'var(--red-primary)', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'Poppins, sans-serif',
+              }}>Reject</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* UTR lookup */}
+      <div className="card">
+        <SectionTitle>Lookup by Transaction ID</SectionTitle>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <input
+            className="input"
+            placeholder="Paste UTR / Transaction ID"
+            value={utrSearch}
+            onChange={e => { setUtrSearch(e.target.value); setSearchResult(null); }}
+            onKeyDown={e => e.key === 'Enter' && searchByUtr()}
+            style={{ flex: 1, marginBottom: 0 }}
+          />
+          <SmallBtn onClick={searchByUtr} loading={searching} label="Find" loadingLabel="…" disabled={!utrSearch.trim()} />
+        </div>
+        {searchResult === 'not_found' && (
+          <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 10 }}>No request found for that transaction ID.</div>
+        )}
+        {searchResult && searchResult !== 'not_found' && (
+          <PaymentRequestCard req={searchResult} processing={processing} onApprove={approve} onReject={reject} />
+        )}
+      </div>
+
+      {/* All requests list */}
+      <div className="card">
+        <SectionTitle>Payment Requests</SectionTitle>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+          {['pending', 'approved', 'rejected', 'all'].map(f => (
+            <button key={f} onClick={() => setFilter(f)} style={{
+              padding: '6px 14px', fontSize: 12, fontWeight: 600, borderRadius: 20,
+              border: filter === f ? 'none' : '1px solid var(--border)',
+              background: filter === f ? 'var(--red-gradient)' : 'transparent',
+              color: filter === f ? '#fff' : 'var(--text-secondary)',
+              cursor: 'pointer', textTransform: 'capitalize', fontFamily: 'Poppins, sans-serif',
+            }}>{f}</button>
+          ))}
+        </div>
+        <StatusMsg msg={msg} />
+        {requests.length === 0 && (
+          <div style={{ fontSize: 13, color: 'var(--text-muted)', textAlign: 'center', padding: 24 }}>No requests</div>
+        )}
+        {requests.map(req => (
+          <PaymentRequestCard key={req.id} req={req} processing={processing} onApprove={approve} onReject={reject} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 function RevealPicksTab({ matches }) {
@@ -1246,13 +1512,14 @@ function RevealPicksTab({ matches }) {
 }
 
 const TABS = [
-  { key: 'sync',    label: 'Sync' },
-  { key: 'lineup',  label: 'Lineup' },
-  { key: 'players', label: 'Players' },
-  { key: 'points',  label: 'Points' },
-  { key: 'picks',   label: 'Picks' },
-  { key: 'leagues', label: 'Leagues' },
-  { key: 'm11',     label: 'My11 Sync' },
+  { key: 'sync',     label: 'Sync' },
+  { key: 'lineup',   label: 'Lineup' },
+  { key: 'players',  label: 'Players' },
+  { key: 'points',   label: 'Points' },
+  { key: 'picks',    label: 'Picks' },
+  { key: 'leagues',  label: 'Leagues' },
+  { key: 'm11',      label: 'My11 Sync' },
+  { key: 'payments', label: 'Payments' },
 ];
 
 export default function Admin() {
@@ -1296,7 +1563,8 @@ export default function Admin() {
       {tab === 'points'  && <PointsTab matches={matches} />}
       {tab === 'picks'   && <RevealPicksTab matches={matches} />}
       {tab === 'leagues' && <LeaguesTab />}
-      {tab === 'm11'     && <M11SyncTab matches={matches} />}
+      {tab === 'm11'      && <M11SyncTab matches={matches} />}
+      {tab === 'payments' && <PaymentsTab />}
     </div>
   );
 }

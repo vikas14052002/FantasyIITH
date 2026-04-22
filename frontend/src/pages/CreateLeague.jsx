@@ -39,7 +39,7 @@ export default function CreateLeague() {
 
   const handleShare = async () => {
     if (navigator.share) {
-      await navigator.share({ title: 'Join my Fantasy League!', text: `Join "${created.name}" on FantasyIITH! Code: ${created.invite_code}` });
+      await navigator.share({ title: 'Join my Fantasy League!', text: `Join "${created.name}" on PlayXI! Code: ${created.invite_code}` });
     } else {
       navigator.clipboard.writeText(created.invite_code);
       alert('Code copied!');
