@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { getUser } from '../lib/auth';
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import AdBanner from '../components/AdBanner';
+// import AdBanner from '../components/AdBanner';
 import './Landing.css';
 
 export default function Landing() {
@@ -66,7 +66,7 @@ export default function Landing() {
         </div>
       </section>
 
-      <AdBanner />
+      {/* <AdBanner /> */}
 
       {/* Points Preview */}
       <section className="landing-section">

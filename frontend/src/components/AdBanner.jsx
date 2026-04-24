@@ -1,11 +1,13 @@
 import { useEffect, useRef } from 'react';
 
+const ADS_ENABLED = import.meta.env.VITE_ADS_ENABLED === 'true';
+
 export default function AdBanner({ style = {} }) {
   const containerRef = useRef(null);
   const loaded = useRef(false);
 
   useEffect(() => {
-    if (loaded.current || !containerRef.current) return;
+    if (!ADS_ENABLED || loaded.current || !containerRef.current) return;
     loaded.current = true;
 
     const iframe = document.createElement('iframe');
@@ -14,6 +16,8 @@ export default function AdBanner({ style = {} }) {
     iframe.style.cssText = 'border:0; padding:0; width:100%; height:90px; overflow:hidden;';
     containerRef.current.appendChild(iframe);
   }, []);
+
+  if (!ADS_ENABLED) return null;
 
   return (
     <div

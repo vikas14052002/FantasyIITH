@@ -3,7 +3,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { getUser } from '../lib/auth';
 import { getTeamLogo } from '../lib/teamLogos';
-import AdBanner from '../components/AdBanner';
+// import AdBanner from '../components/AdBanner';
 import { isFantasyRosterActive } from '../lib/matchPlayers';
 import { hasMatchStarted } from '../lib/matchLock';
 import AnimatedNumber from '../components/AnimatedNumber';
@@ -562,7 +562,7 @@ export default function MatchDetail() {
 
       </div>{/* end swipe wrapper */}
       {selectedPlayer && <PlayerBreakdown player={selectedPlayer} onClose={() => setSelectedPlayer(null)} />}
-      <AdBanner slot="" format="fluid" />
+      {/* <AdBanner slot="" format="fluid" /> */}
     </div>
   );
 }

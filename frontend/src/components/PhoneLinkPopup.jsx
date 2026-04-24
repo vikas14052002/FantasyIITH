@@ -48,7 +48,7 @@ export default function PhoneLinkPopup({ onComplete }) {
       <div className="plp-modal">
         <div className="plp-title">Verify Your Number</div>
         <p className="plp-subtitle">
-          Hi <strong>{user?.name}</strong>, we've upgraded to phone login. Verify your number to continue playing.
+          Hi <strong>{user?.name}</strong>, verify your number to continue playing.
         </p>
 
         {step === 'phone' ? (

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { getUser } from '../lib/auth';
 import MatchCard from '../components/MatchCard';
-import AdBanner from '../components/AdBanner';
+// import AdBanner from '../components/AdBanner';
 import './Home.css';
 
 export default function Home() {
@@ -129,7 +129,7 @@ export default function Home() {
         ) : (
           <>
             {filtered.map(m => <MatchCard key={m.id} match={m} leagueId={firstLeague?.id} hasTeam={null} />)}
-            <AdBanner />
+            {/* <AdBanner /> */}
           </>
         )}
       </div>

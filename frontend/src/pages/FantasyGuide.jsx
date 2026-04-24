@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import AdBanner from '../components/AdBanner';
+// import AdBanner from '../components/AdBanner';
 
 export default function FantasyGuide() {
   const navigate = useNavigate();
@@ -21,7 +21,7 @@ export default function FantasyGuide() {
         <p><strong>Balance Your Credits:</strong> You have 100 credits to build your 11-player team. Don't spend all your credits on expensive star players. Find value picks — affordable players who are likely to perform well. A balanced team with 3-4 premium picks and 7-8 value selections often outperforms an all-star team that lacks depth.</p>
         <p><strong>Watch the Toss:</strong> The toss can significantly impact player performance. Teams batting first on certain pitches might score more freely, while chasing teams on dew-affected evenings might have an advantage. If possible, finalize your team after the toss.</p>
 
-        <AdBanner />
+        {/* <AdBanner /> */}
 
         <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', marginTop: 24, marginBottom: 8 }}>Understanding Player Roles</h2>
         <p>In PlayXI, every player is classified into one of four roles. Your team must include players from each category within specified limits:</p>

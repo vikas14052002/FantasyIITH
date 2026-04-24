@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { getUser } from '../lib/auth';
 import { LeaguesSkeleton } from '../components/Skeleton';
-import AdBanner from '../components/AdBanner';
+// import AdBanner from '../components/AdBanner';
 import AppFooter from '../components/AppFooter';
 
 const PAYMENTS_ENABLED = import.meta.env.VITE_PAYMENTS_ENABLED === 'true';
@@ -179,7 +179,7 @@ export default function Leagues() {
           </div>
         ))
       )}
-      <AdBanner />
+      {/* <AdBanner /> */}
       <AppFooter />
     </div>
   );
